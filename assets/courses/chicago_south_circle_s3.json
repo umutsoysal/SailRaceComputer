@@ -1,9 +1,9 @@
 {
   "format": "sail-race-course",
   "version": 1,
-  "name": "Demo Chicago",
+  "name": "Chicago South Circle S3",
   "createdAt": "2026-06-04T00:00:00Z",
-  "notes": "Built-in demo course used by the dev simulator when no other course is loaded. Edit freely.",
+  "notes": "South-side circle course off Chicago. SA7 start/finish + marks 3/2/8.",
   "buoys": [
   {
     "name": "SA7 Start",

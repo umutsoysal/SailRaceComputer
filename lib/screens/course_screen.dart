@@ -517,3 +517,100 @@ class _BuoyDialogState extends State<_BuoyDialog> {
     );
   }
 }
+
+enum _LibraryActionKind { load, delete }
+
+class _LibraryAction {
+  _LibraryAction(this.kind, this.entry);
+  final _LibraryActionKind kind;
+  final CourseEntry? entry;
+}
+
+class _LibrarySheet extends StatelessWidget {
+  const _LibrarySheet({required this.entries});
+
+  final List<CourseEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final bundled = entries.where((e) => e.isBundled).toList();
+    final saved = entries.where((e) => !e.isBundled).toList();
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text('Course library',
+                  style: Theme.of(context).textTheme.titleLarge),
+            ),
+            if (entries.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'No courses yet. Import a file or save the current course '
+                  'to the library from the menu.',
+                ),
+              )
+            else
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    if (bundled.isNotEmpty) ...[
+                      _sectionHeader(context, 'Bundled'),
+                      ...bundled.map((e) => _row(context, e, deletable: false)),
+                    ],
+                    if (saved.isNotEmpty) ...[
+                      _sectionHeader(context, 'Saved'),
+                      ...saved.map((e) => _row(context, e, deletable: true)),
+                    ],
+                  ],
+                ),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionHeader(BuildContext context, String title) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+        child: Text(title,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                )),
+      );
+
+  Widget _row(BuildContext context, CourseEntry e, {required bool deletable}) {
+    return ListTile(
+      leading: CircleAvatar(
+        child: Icon(e.isBundled ? Icons.inventory_2_outlined : Icons.bookmark),
+      ),
+      title: Text(e.name),
+      subtitle: Text('${e.buoyCount} buoy${e.buoyCount == 1 ? '' : 's'}'
+          '${e.isBundled ? ' • bundled' : ''}'),
+      trailing: deletable
+          ? IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Remove from library',
+              onPressed: () => Navigator.pop(
+                context,
+                _LibraryAction(_LibraryActionKind.delete, e),
+              ),
+            )
+          : const Icon(Icons.chevron_right),
+      onTap: () => Navigator.pop(
+        context,
+        _LibraryAction(_LibraryActionKind.load, e),
+      ),
+    );
+  }
+}

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show rootBundle, AssetManifest;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/course.dart';
 import 'course_file.dart';
@@ -39,9 +39,9 @@ class CourseLibrary {
 
   Future<List<CourseEntry>> listBundled() async {
     try {
-      final manifest = await rootBundle.loadString('AssetManifest.json');
-      final map = jsonDecode(manifest) as Map<String, dynamic>;
-      final keys = map.keys
+      final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      final keys = manifest
+          .listAssets()
           .where((k) => k.startsWith(_assetDir) && k.endsWith('.json'))
           .toList()
         ..sort();
