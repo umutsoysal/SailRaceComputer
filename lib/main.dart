@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'app_shell.dart';
 import 'models/course.dart';
-import 'screens/course_screen.dart';
-import 'screens/race_screen.dart';
 import 'services/course_store.dart';
 
 void main() {
@@ -34,7 +33,6 @@ class _Home extends StatefulWidget {
 class _HomeState extends State<_Home> {
   final _store = CourseStore();
   Course? _course;
-  int _tab = 0;
 
   @override
   void initState() {
@@ -62,28 +60,9 @@ class _HomeState extends State<_Home> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    return Scaffold(
-      body: IndexedStack(
-        index: _tab,
-        children: [
-          CourseScreen(course: course, onChanged: _onCourseChanged),
-          RaceScreen(course: course),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.flag_outlined),
-              selectedIcon: Icon(Icons.flag),
-              label: 'Course'),
-          NavigationDestination(
-              icon: Icon(Icons.speed_outlined),
-              selectedIcon: Icon(Icons.speed),
-              label: 'Race'),
-        ],
-      ),
+    return AppShell(
+      course: course,
+      onCourseChanged: _onCourseChanged,
     );
   }
 }

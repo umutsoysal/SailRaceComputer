@@ -2,13 +2,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/course.dart';
+import '../services/position_source.dart';
 import '../utils/geo.dart';
 
 /// Live race screen — shows the next mark with bearing, distance, SOG, COG,
 /// and VMG toward the mark.
 class RaceScreen extends StatefulWidget {
   final Course course;
-  const RaceScreen({super.key, required this.course});
+  final PositionSource? positionSource;
+
+  const RaceScreen({
+    super.key,
+    required this.course,
+    this.positionSource,
+  });
 
   @override
   State<RaceScreen> createState() => _RaceScreenState();
@@ -16,6 +23,8 @@ class RaceScreen extends StatefulWidget {
 
 class _RaceScreenState extends State<RaceScreen> {
   StreamSubscription<Position>? _sub;
+  late final PositionSource _source;
+  late final bool _ownsSource;
   Position? _pos;
   String? _error;
   int _currentMark = 0;
@@ -24,37 +33,31 @@ class _RaceScreenState extends State<RaceScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.positionSource != null) {
+      _source = widget.positionSource!;
+      _ownsSource = false;
+    } else {
+      _source = GeolocatorPositionSource();
+      _ownsSource = true;
+    }
     _start();
   }
 
   @override
   void dispose() {
     _sub?.cancel();
+    if (_ownsSource) _source.dispose();
     super.dispose();
   }
 
   Future<void> _start() async {
     try {
-      final enabled = await Geolocator.isLocationServiceEnabled();
-      if (!enabled) {
-        setState(() => _error = 'Location services are disabled.');
+      final err = await _source.ensureReady();
+      if (err != null) {
+        setState(() => _error = err);
         return;
       }
-      var perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) {
-        perm = await Geolocator.requestPermission();
-      }
-      if (perm == LocationPermission.denied ||
-          perm == LocationPermission.deniedForever) {
-        setState(() => _error = 'Location permission denied.');
-        return;
-      }
-      const settings = LocationSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 0,
-      );
-      _sub = Geolocator.getPositionStream(locationSettings: settings)
-          .listen(_onFix, onError: (e) {
+      _sub = _source.stream.listen(_onFix, onError: (e) {
         setState(() => _error = e.toString());
       });
     } catch (e) {

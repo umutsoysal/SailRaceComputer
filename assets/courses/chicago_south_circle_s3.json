@@ -1,0 +1,34 @@
+{
+  "format": "sail-race-course",
+  "version": 1,
+  "name": "Demo Chicago",
+  "createdAt": "2026-06-04T00:00:00Z",
+  "notes": "Built-in demo course used by the dev simulator when no other course is loaded. Edit freely.",
+  "buoys": [
+  {
+    "name": "SA7 Start",
+    "lat": 41.852833,
+    "lng": -87.556833
+  },
+  {
+    "name": "Mark 3",
+    "lat": 41.852833,
+    "lng": -87.532500
+  },
+  {
+    "name": "Mark 2",
+    "lat": 41.865667,
+    "lng": -87.539500
+  },
+  {
+    "name": "Mark 8",
+    "lat": 41.865667,
+    "lng": -87.574000
+  },
+  {
+    "name": "SA7 Finish",
+    "lat": 41.852833,
+    "lng": -87.556833
+  }
+]
+}
