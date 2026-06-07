@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/course.dart';
@@ -137,20 +137,17 @@ class _CourseScreenState extends State<CourseScreen> {
 
   Future<void> _importFromFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: const ['json'],
-        withData: true,
+      const typeGroup = XTypeGroup(
+        label: 'Course',
+        extensions: ['json'],
+        uniformTypeIdentifiers: ['public.json'],
+        mimeTypes: ['application/json'],
       );
-      if (result == null || result.files.isEmpty) return;
-      final bytes = result.files.single.bytes;
-      if (bytes == null) {
-        _snack('Could not read file contents.');
-        return;
-      }
+      final file = await openFile(acceptedTypeGroups: [typeGroup]);
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
       final json = utf8.decode(bytes);
-      _applyImported(CourseFile.decode(json),
-          sourceName: result.files.single.name);
+      _applyImported(CourseFile.decode(json), sourceName: file.name);
     } on CourseFileException catch (e) {
       _snack('Invalid course file: $e');
     } catch (e) {

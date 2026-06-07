@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   geolocator: ^14.0.2
   shared_preferences: ^2.5.5
-  file_picker: ^3.0.4
+  file_selector: ^1.0.3
   share_plus: ^13.1.0
 
 dev_dependencies:
@@ -49,6 +49,20 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  image_path: "assets/branding/icon.png"
+  ios: true
+  remove_alpha_ios: true
+  android: "ic_launcher"
+  adaptive_icon_background: "#0A3A6E"
+  adaptive_icon_foreground: "assets/branding/icon_foreground.png"
+  web:
+    generate: true
+    image_path: "assets/branding/icon.png"
+    background_color: "#0A3A6E"
+    theme_color: "#0A3A6E"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

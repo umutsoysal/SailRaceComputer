@@ -17,7 +17,7 @@ class SimulatorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Sail Race Computer — Simulator',
+      title: 'Race Mate — Simulator',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0B6FB8)),

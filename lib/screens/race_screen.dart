@@ -136,64 +136,73 @@ class _RaceScreenState extends State<RaceScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _markHeader(mark),
-              const SizedBox(height: 16),
-              if (_error != null)
-                _errorCard(_error!)
-              else if (fix == null)
-                const _Waiting()
-              else ...[
-                _bigMetric(
-                  label: 'VMG to mark',
-                  value: msToKnots(vmg).toStringAsFixed(2),
-                  unit: 'kn',
-                  good: vmg > 0,
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _markHeader(mark),
+                      const SizedBox(height: 16),
+                      if (_error != null)
+                        _errorCard(_error!)
+                      else if (fix == null)
+                        const _Waiting()
+                      else ...[
+                        _bigMetric(
+                          label: 'VMG to mark',
+                          value: msToKnots(vmg).toStringAsFixed(2),
+                          unit: 'kn',
+                          good: vmg > 0,
+                        ),
+                        const SizedBox(height: 12),
+                        Row(children: [
+                          Expanded(
+                              child: _metric(
+                                  'Distance',
+                                  distance == null
+                                      ? '--'
+                                      : metersToNm(distance).toStringAsFixed(2),
+                                  'NM')),
+                          const SizedBox(width: 12),
+                          Expanded(
+                              child: _metric(
+                                  'Bearing',
+                                  bearing == null
+                                      ? '--'
+                                      : '${bearing.toStringAsFixed(0)}°',
+                                  bearing == null ? '' : compass(bearing))),
+                        ]),
+                        const SizedBox(height: 12),
+                        Row(children: [
+                          Expanded(
+                              child: _metric('SOG',
+                                  msToKnots(sog).toStringAsFixed(2), 'kn')),
+                          const SizedBox(width: 12),
+                          Expanded(
+                              child: _metric('COG',
+                                  '${cog.toStringAsFixed(0)}°', compass(cog))),
+                        ]),
+                        const SizedBox(height: 12),
+                        _metric(
+                          'ETA at current VMG',
+                          etaSeconds == null
+                              ? '--:--'
+                              : formatEta(Duration(seconds: etaSeconds)),
+                          '',
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Fix: ${fix.latitude.toStringAsFixed(5)}, '
+                          '${fix.longitude.toStringAsFixed(5)}  '
+                          '±${fix.accuracy.toStringAsFixed(0)} m',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(
-                      child: _metric(
-                          'Distance',
-                          distance == null
-                              ? '--'
-                              : metersToNm(distance).toStringAsFixed(2),
-                          'NM')),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: _metric(
-                          'Bearing',
-                          bearing == null
-                              ? '--'
-                              : '${bearing.toStringAsFixed(0)}°',
-                          bearing == null ? '' : compass(bearing))),
-                ]),
-                const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(
-                      child: _metric('SOG',
-                          msToKnots(sog).toStringAsFixed(2), 'kn')),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: _metric(
-                          'COG', '${cog.toStringAsFixed(0)}°', compass(cog))),
-                ]),
-                const SizedBox(height: 12),
-                _metric(
-                  'ETA at current VMG',
-                  etaSeconds == null
-                      ? '--:--'
-                      : formatEta(Duration(seconds: etaSeconds)),
-                  '',
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Fix: ${fix.latitude.toStringAsFixed(5)}, '
-                  '${fix.longitude.toStringAsFixed(5)}  '
-                  '±${fix.accuracy.toStringAsFixed(0)} m',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-              const Spacer(),
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(

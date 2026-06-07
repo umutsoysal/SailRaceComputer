@@ -13,7 +13,7 @@ class SailRaceApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Sail Race Computer',
+      title: 'Race Mate',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0B6FB8)),
         useMaterial3: true,
