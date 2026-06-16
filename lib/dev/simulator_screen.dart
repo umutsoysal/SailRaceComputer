@@ -279,6 +279,7 @@ class _PhonePreview extends StatelessWidget {
   /// Logical height injected into [MediaQueryData] for the portrait preview
   /// so [OrientationBuilder] inside the app shell sees portrait orientation.
   static const double _portraitPreviewHeight = 700;
+  static const double _frameBorderWidth = 6;
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +297,8 @@ class _PhonePreview extends StatelessWidget {
           height: height,
           decoration: BoxDecoration(
             color: Colors.black,
-            border: Border.all(color: Colors.black87, width: 6),
+            border:
+                Border.all(color: Colors.black87, width: _frameBorderWidth),
             borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
@@ -314,8 +316,10 @@ class _PhonePreview extends StatelessWidget {
               // orientation.
               data: MediaQueryData(
                 size: Size(
-                  width - (6 * 2), // subtract border widths (6 each side)
-                  landscape ? height! - (6 * 2) : _portraitPreviewHeight,
+                  width - (_frameBorderWidth * 2),
+                  landscape
+                      ? height! - (_frameBorderWidth * 2)
+                      : _portraitPreviewHeight,
                 ),
               ),
               child: child,
