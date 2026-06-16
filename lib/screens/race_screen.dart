@@ -436,6 +436,7 @@ class _RaceScreenState extends State<RaceScreen> {
     required String unit,
     required bool good,
   }) {
+    // Keeps the smaller unit text visually aligned with the larger wrapped value.
     const unitBaselineOffset = 8.0;
     final color = good ? Colors.green.shade700 : Colors.red.shade700;
     return Card(
