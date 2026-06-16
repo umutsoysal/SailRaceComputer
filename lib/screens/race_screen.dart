@@ -436,8 +436,6 @@ class _RaceScreenState extends State<RaceScreen> {
     required String unit,
     required bool good,
   }) {
-    // Keeps the smaller unit text visually aligned with the larger wrapped value.
-    const unitBaselineOffset = 8.0;
     final color = good ? Colors.green.shade700 : Colors.red.shade700;
     return Card(
       color: color.withValues(alpha: 0.08),
@@ -457,12 +455,7 @@ class _RaceScreenState extends State<RaceScreen> {
                         fontSize: 56,
                         fontWeight: FontWeight.w700,
                         color: color)),
-                Padding(
-                  padding:
-                      const EdgeInsets.only(bottom: unitBaselineOffset),
-                  child: Text(unit,
-                      style: TextStyle(fontSize: 22, color: color)),
-                ),
+                Text(unit, style: TextStyle(fontSize: 22, color: color)),
               ],
             ),
           ],
