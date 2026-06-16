@@ -169,10 +169,10 @@ void main() {
     testWidgets('VMG widget is horizontally centred (in the middle column)',
         (tester) async {
       // Use a fixed window size so pixel positions are deterministic.
-      tester.view.physicalSize = landscape * tester.view.devicePixelRatio;
       tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = landscape;
       addTearDown(tester.view.resetPhysicalSize);
-
+      addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(
           _buildRaceScreen(course: course, fix: fix, screenSize: landscape));
       await tester.pump();
