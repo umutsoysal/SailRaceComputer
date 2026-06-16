@@ -276,6 +276,10 @@ class _PhonePreview extends StatelessWidget {
   /// the horizontal-screen layout can be tested on the desk.
   final bool landscape;
 
+  /// Logical height injected into [MediaQueryData] for the portrait preview
+  /// so [OrientationBuilder] inside the app shell sees portrait orientation.
+  static const double _portraitPreviewHeight = 700;
+
   @override
   Widget build(BuildContext context) {
     // Portrait: 360 × unconstrained height (fills the parent vertically).
@@ -311,7 +315,7 @@ class _PhonePreview extends StatelessWidget {
               data: MediaQueryData(
                 size: Size(
                   width - 12, // subtract border widths (6 each side)
-                  landscape ? height! - 12 : 700,
+                  landscape ? height! - 12 : _portraitPreviewHeight,
                 ),
               ),
               child: child,
