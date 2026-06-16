@@ -490,8 +490,7 @@ class _RaceScreenState extends State<RaceScreen> {
                     Text(value,
                         style: const TextStyle(
                             fontSize: 28, fontWeight: FontWeight.w600)),
-                    if (unit.isNotEmpty)
-                      const SizedBox(width: 6),
+                    const SizedBox(width: 6),
                     Text(unit, style: Theme.of(context).textTheme.bodyMedium),
                   ],
                 ),
