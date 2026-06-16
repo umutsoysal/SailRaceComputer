@@ -447,7 +447,7 @@ class _RaceScreenState extends State<RaceScreen> {
             const SizedBox(height: 4),
             Wrap(
               alignment: WrapAlignment.center,
-              crossAxisAlignment: WrapCrossAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.end,
               spacing: 8,
               children: [
                 Text(value,
@@ -474,7 +474,7 @@ class _RaceScreenState extends State<RaceScreen> {
             Text(label, style: Theme.of(context).textTheme.labelMedium),
             const SizedBox(height: 4),
             Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.end,
               spacing: 6,
               runSpacing: 4,
               children: [
