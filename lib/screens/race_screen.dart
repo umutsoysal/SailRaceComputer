@@ -445,23 +445,22 @@ class _RaceScreenState extends State<RaceScreen> {
           children: [
             Text(label, style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(value,
-                      style: TextStyle(
-                          fontSize: 56,
-                          fontWeight: FontWeight.w700,
-                          color: color)),
-                  const SizedBox(width: 8),
-                  Text(unit,
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              children: [
+                Text(value,
+                    style: TextStyle(
+                        fontSize: 56,
+                        fontWeight: FontWeight.w700,
+                        color: color)),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(unit,
                       style: TextStyle(fontSize: 22, color: color)),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
@@ -478,23 +477,16 @@ class _RaceScreenState extends State<RaceScreen> {
           children: [
             Text(label, style: Theme.of(context).textTheme.labelMedium),
             const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(value,
-                        style: const TextStyle(
-                            fontSize: 28, fontWeight: FontWeight.w600)),
-                    const SizedBox(width: 6),
-                    Text(unit, style: Theme.of(context).textTheme.bodyMedium),
-                  ],
-                ),
-              ),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 28, fontWeight: FontWeight.w600)),
+                Text(unit, style: Theme.of(context).textTheme.bodyMedium),
+              ],
             ),
           ],
         ),
