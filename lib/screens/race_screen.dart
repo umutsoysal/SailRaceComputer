@@ -314,7 +314,7 @@ class _RaceScreenState extends State<RaceScreen> {
           flex: 4,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(6, 12, 12, 12),
-            child: fix == null
+            child: (_error != null || fix == null)
                 ? const SizedBox.shrink()
                 : SingleChildScrollView(
                     child: Column(
