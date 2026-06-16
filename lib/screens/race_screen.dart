@@ -278,15 +278,15 @@ class _RaceScreenState extends State<RaceScreen> {
           flex: 3,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _markHeader(mark),
-                  const SizedBox(height: 12),
-                  _navButtons(buoys, direction: Axis.vertical),
-                ],
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(child: _markHeader(mark)),
+                ),
+                const SizedBox(height: 12),
+                _navButtons(buoys, direction: Axis.vertical),
+              ],
             ),
           ),
         ),
@@ -490,10 +490,9 @@ class _RaceScreenState extends State<RaceScreen> {
                     Text(value,
                         style: const TextStyle(
                             fontSize: 28, fontWeight: FontWeight.w600)),
-                    if (unit.isNotEmpty) ...[
+                    if (unit.isNotEmpty)
                       const SizedBox(width: 6),
-                      Text(unit, style: Theme.of(context).textTheme.bodyMedium),
-                    ],
+                    Text(unit, style: Theme.of(context).textTheme.bodyMedium),
                   ],
                 ),
               ),
