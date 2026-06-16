@@ -314,8 +314,8 @@ class _PhonePreview extends StatelessWidget {
               // orientation.
               data: MediaQueryData(
                 size: Size(
-                  width - 12, // subtract border widths (6 each side)
-                  landscape ? height! - 12 : _portraitPreviewHeight,
+                  width - (6 * 2), // subtract border widths (6 each side)
+                  landscape ? height! - (6 * 2) : _portraitPreviewHeight,
                 ),
               ),
               child: child,
