@@ -83,6 +83,7 @@ Widget _buildRaceScreen({
 void main() {
   const portrait = Size(390, 844); // typical phone portrait
   const landscape = Size(844, 390); // typical phone landscape
+  const compactLandscape = Size(640, 360); // simulator/device landscape
 
   final course = Course(name: 'Test', buoys: [
     Buoy(
@@ -164,6 +165,26 @@ void main() {
 
       expect(find.text('Previous'), findsOneWidget);
       expect(find.text('Next mark'), findsOneWidget);
+    });
+
+    testWidgets('does not overflow on compact landscape screens',
+        (tester) async {
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = compactLandscape;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_buildRaceScreen(
+        course: course,
+        fix: fix,
+        screenSize: compactLandscape,
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Previous'), findsOneWidget);
+      expect(find.text('Next mark'), findsOneWidget);
+      expect(find.text('VMG to mark'), findsOneWidget);
     });
 
     testWidgets('VMG widget is horizontally centred (in the middle column)',

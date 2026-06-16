@@ -278,13 +278,15 @@ class _RaceScreenState extends State<RaceScreen> {
           flex: 3,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _markHeader(mark),
-                const Spacer(),
-                _navButtons(buoys),
-              ],
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _markHeader(mark),
+                  const SizedBox(height: 12),
+                  _navButtons(buoys, direction: Axis.vertical),
+                ],
+              ),
             ),
           ),
         ),
@@ -371,24 +373,34 @@ class _RaceScreenState extends State<RaceScreen> {
     );
   }
 
-  Widget _navButtons(List<Buoy> buoys) {
+  Widget _navButtons(List<Buoy> buoys, {Axis direction = Axis.horizontal}) {
+    final previousButton = OutlinedButton.icon(
+      onPressed: _currentMark > 0 ? _prev : null,
+      icon: const Icon(Icons.skip_previous),
+      label: const Text('Previous'),
+    );
+    final nextButton = FilledButton.icon(
+      onPressed: _currentMark < buoys.length - 1 ? _next : null,
+      icon: const Icon(Icons.skip_next),
+      label: const Text('Next mark'),
+    );
+
+    if (direction == Axis.vertical) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          previousButton,
+          const SizedBox(height: 12),
+          nextButton,
+        ],
+      );
+    }
+
     return Row(
       children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _currentMark > 0 ? _prev : null,
-            icon: const Icon(Icons.skip_previous),
-            label: const Text('Previous'),
-          ),
-        ),
+        Expanded(child: previousButton),
         const SizedBox(width: 12),
-        Expanded(
-          child: FilledButton.icon(
-            onPressed: _currentMark < buoys.length - 1 ? _next : null,
-            icon: const Icon(Icons.skip_next),
-            label: const Text('Next mark'),
-          ),
-        ),
+        Expanded(child: nextButton),
       ],
     );
   }
@@ -433,20 +445,23 @@ class _RaceScreenState extends State<RaceScreen> {
           children: [
             Text(label, style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(value,
-                    style: TextStyle(
-                        fontSize: 56,
-                        fontWeight: FontWeight.w700,
-                        color: color)),
-                const SizedBox(width: 8),
-                Text(unit,
-                    style: TextStyle(fontSize: 22, color: color)),
-              ],
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(value,
+                      style: TextStyle(
+                          fontSize: 56,
+                          fontWeight: FontWeight.w700,
+                          color: color)),
+                  const SizedBox(width: 8),
+                  Text(unit,
+                      style: TextStyle(fontSize: 22, color: color)),
+                ],
+              ),
             ),
           ],
         ),
@@ -463,16 +478,25 @@ class _RaceScreenState extends State<RaceScreen> {
           children: [
             Text(label, style: Theme.of(context).textTheme.labelMedium),
             const SizedBox(height: 4),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 28, fontWeight: FontWeight.w600)),
-                const SizedBox(width: 6),
-                Text(unit, style: Theme.of(context).textTheme.bodyMedium),
-              ],
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(value,
+                        style: const TextStyle(
+                            fontSize: 28, fontWeight: FontWeight.w600)),
+                    if (unit.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Text(unit, style: Theme.of(context).textTheme.bodyMedium),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ],
         ),
