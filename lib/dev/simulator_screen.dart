@@ -26,6 +26,10 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
   SimulatedPositionSource? _posSource;
   int _currentMark = 0;
   bool _autoAdvance = true;
+  /// When true, the phone preview is rendered in landscape orientation so the
+  /// landscape layout of the Race screen can be tested without a physical
+  /// device rotation.
+  bool _previewLandscape = false;
 
   @override
   void initState() {
@@ -164,6 +168,16 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
               });
             },
           ),
+          IconButton(
+            tooltip: _previewLandscape
+                ? 'Switch preview to portrait'
+                : 'Switch preview to landscape',
+            icon: Icon(_previewLandscape
+                ? Icons.stay_current_portrait
+                : Icons.stay_current_landscape),
+            onPressed: () =>
+                setState(() => _previewLandscape = !_previewLandscape),
+          ),
         ],
       ),
       body: LayoutBuilder(builder: (ctx, c) {
@@ -200,6 +214,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
           },
         );
         final preview = _PhonePreview(
+          landscape: _previewLandscape,
           child: AppShell(
             key: const ValueKey('sim-app-shell'),
             course: course,
@@ -255,20 +270,35 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
 }
 
 class _PhonePreview extends StatelessWidget {
-  const _PhonePreview({required this.child});
+  const _PhonePreview({required this.child, this.landscape = false});
   final Widget child;
+  /// When true, the preview frame is rotated to a landscape aspect ratio so
+  /// the horizontal-screen layout can be tested on the desk.
+  final bool landscape;
+
+  /// Logical height injected into [MediaQueryData] for the portrait preview
+  /// so [OrientationBuilder] inside the app shell sees portrait orientation.
+  static const double _portraitPreviewHeight = 700;
+  static const double _frameBorderWidth = 6;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    // Portrait: 360 × unconstrained height (fills the parent vertically).
+    // Landscape: 640 × 360 fixed.
+    final double width = landscape ? 640 : 360;
+    final double? height = landscape ? 360 : null;
+
+    final phone = Padding(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(28),
         child: Container(
-          width: 360,
+          width: width,
+          height: height,
           decoration: BoxDecoration(
             color: Colors.black,
-            border: Border.all(color: Colors.black87, width: 6),
+            border:
+                Border.all(color: Colors.black87, width: _frameBorderWidth),
             borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
@@ -281,14 +311,25 @@ class _PhonePreview extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(22),
             child: MediaQuery(
-              // Phone-like text scale so the preview matches a handset.
-              data: const MediaQueryData(),
+              // Provide a media-query that matches the preview dimensions so
+              // OrientationBuilder inside the app shell sees the right
+              // orientation.
+              data: MediaQueryData(
+                size: Size(
+                  width - (_frameBorderWidth * 2),
+                  landscape
+                      ? height! - (_frameBorderWidth * 2)
+                      : _portraitPreviewHeight,
+                ),
+              ),
               child: child,
             ),
           ),
         ),
       ),
     );
+
+    return phone;
   }
 }
 

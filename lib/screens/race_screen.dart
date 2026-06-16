@@ -131,30 +131,197 @@ class _RaceScreenState extends State<RaceScreen> {
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _markHeader(mark),
-                      const SizedBox(height: 16),
-                      if (_error != null)
-                        _errorCard(_error!)
-                      else if (fix == null)
-                        const _Waiting()
-                      else ...[
-                        _bigMetric(
+        child: OrientationBuilder(
+          builder: (context, orientation) {
+            if (orientation == Orientation.landscape) {
+              return _buildLandscapeBody(
+                mark: mark,
+                fix: fix,
+                buoys: buoys,
+                distance: distance,
+                bearing: bearing,
+                sog: sog,
+                cog: cog,
+                vmg: vmg,
+                etaSeconds: etaSeconds,
+              );
+            }
+            return _buildPortraitBody(
+              mark: mark,
+              fix: fix,
+              buoys: buoys,
+              distance: distance,
+              bearing: bearing,
+              sog: sog,
+              cog: cog,
+              vmg: vmg,
+              etaSeconds: etaSeconds,
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Portrait layout: vertical column with VMG at top, metrics below, nav at
+  /// the bottom.
+  Widget _buildPortraitBody({
+    required Buoy mark,
+    required Position? fix,
+    required List<Buoy> buoys,
+    required double? distance,
+    required double? bearing,
+    required double sog,
+    required double cog,
+    required double vmg,
+    required int? etaSeconds,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _markHeader(mark),
+                  const SizedBox(height: 16),
+                  if (_error != null)
+                    _errorCard(_error!)
+                  else if (fix == null)
+                    const _Waiting()
+                  else ...[
+                    _bigMetric(
+                      label: 'VMG to mark',
+                      value: msToKnots(vmg).toStringAsFixed(2),
+                      unit: 'kn',
+                      good: vmg > 0,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(children: [
+                      Expanded(
+                          child: _metric(
+                              'Distance',
+                              distance == null
+                                  ? '--'
+                                  : metersToNm(distance).toStringAsFixed(2),
+                              'NM')),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: _metric(
+                              'Bearing',
+                              bearing == null
+                                  ? '--'
+                                  : '${bearing.toStringAsFixed(0)}°',
+                              bearing == null ? '' : compass(bearing))),
+                    ]),
+                    const SizedBox(height: 12),
+                    Row(children: [
+                      Expanded(
+                          child: _metric('SOG',
+                              msToKnots(sog).toStringAsFixed(2), 'kn')),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: _metric('COG',
+                              '${cog.toStringAsFixed(0)}°', compass(cog))),
+                    ]),
+                    const SizedBox(height: 12),
+                    _metric(
+                      'ETA at current VMG',
+                      etaSeconds == null
+                          ? '--:--'
+                          : formatEta(Duration(seconds: etaSeconds)),
+                      '',
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Fix: ${fix.latitude.toStringAsFixed(5)}, '
+                      '${fix.longitude.toStringAsFixed(5)}  '
+                      '±${fix.accuracy.toStringAsFixed(0)} m',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _navButtons(buoys),
+        ],
+      ),
+    );
+  }
+
+  /// Landscape layout: 3-column row.
+  ///
+  /// Left  — mark header + Previous/Next buttons.
+  /// Centre — VMG (the most important metric, prominently centred).
+  /// Right — secondary metrics: Distance, Bearing, SOG, COG, ETA, fix info.
+  Widget _buildLandscapeBody({
+    required Buoy mark,
+    required Position? fix,
+    required List<Buoy> buoys,
+    required double? distance,
+    required double? bearing,
+    required double sog,
+    required double cog,
+    required double vmg,
+    required int? etaSeconds,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── Left: mark info + nav ──────────────────────────────────────────
+        Expanded(
+          flex: 3,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(child: _markHeader(mark)),
+                ),
+                const SizedBox(height: 12),
+                _navButtons(buoys, direction: Axis.vertical),
+              ],
+            ),
+          ),
+        ),
+
+        // ── Centre: VMG ────────────────────────────────────────────────────
+        Expanded(
+          flex: 4,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+            child: Center(
+              child: _error != null
+                  ? _errorCard(_error!)
+                  : fix == null
+                      ? const _Waiting()
+                      : _bigMetric(
                           label: 'VMG to mark',
                           value: msToKnots(vmg).toStringAsFixed(2),
                           unit: 'kn',
                           good: vmg > 0,
                         ),
-                        const SizedBox(height: 12),
+            ),
+          ),
+        ),
+
+        // ── Right: secondary metrics ───────────────────────────────────────
+        Expanded(
+          flex: 4,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(6, 12, 12, 12),
+            child: (_error != null || fix == null)
+                ? const SizedBox.shrink()
+                : SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                         Row(children: [
                           Expanded(
                               child: _metric(
@@ -163,7 +330,7 @@ class _RaceScreenState extends State<RaceScreen> {
                                       ? '--'
                                       : metersToNm(distance).toStringAsFixed(2),
                                   'NM')),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
                               child: _metric(
                                   'Bearing',
@@ -172,17 +339,17 @@ class _RaceScreenState extends State<RaceScreen> {
                                       : '${bearing.toStringAsFixed(0)}°',
                                   bearing == null ? '' : compass(bearing))),
                         ]),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         Row(children: [
                           Expanded(
                               child: _metric('SOG',
                                   msToKnots(sog).toStringAsFixed(2), 'kn')),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
                               child: _metric('COG',
                                   '${cog.toStringAsFixed(0)}°', compass(cog))),
                         ]),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         _metric(
                           'ETA at current VMG',
                           etaSeconds == null
@@ -190,7 +357,7 @@ class _RaceScreenState extends State<RaceScreen> {
                               : formatEta(Duration(seconds: etaSeconds)),
                           '',
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 8),
                         Text(
                           'Fix: ${fix.latitude.toStringAsFixed(5)}, '
                           '${fix.longitude.toStringAsFixed(5)}  '
@@ -198,35 +365,43 @@ class _RaceScreenState extends State<RaceScreen> {
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _currentMark > 0 ? _prev : null,
-                      icon: const Icon(Icons.skip_previous),
-                      label: const Text('Previous'),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed:
-                          _currentMark < buoys.length - 1 ? _next : null,
-                      icon: const Icon(Icons.skip_next),
-                      label: const Text('Next mark'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ),
         ),
-      ),
+      ],
+    );
+  }
+
+  Widget _navButtons(List<Buoy> buoys, {Axis direction = Axis.horizontal}) {
+    final previousButton = OutlinedButton.icon(
+      onPressed: _currentMark > 0 ? _prev : null,
+      icon: const Icon(Icons.skip_previous),
+      label: const Text('Previous'),
+    );
+    final nextButton = FilledButton.icon(
+      onPressed: _currentMark < buoys.length - 1 ? _next : null,
+      icon: const Icon(Icons.skip_next),
+      label: const Text('Next mark'),
+    );
+
+    if (direction == Axis.vertical) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          previousButton,
+          const SizedBox(height: 12),
+          nextButton,
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(child: previousButton),
+        const SizedBox(width: 12),
+        Expanded(child: nextButton),
+      ],
     );
   }
 
@@ -270,19 +445,17 @@ class _RaceScreenState extends State<RaceScreen> {
           children: [
             Text(label, style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.end,
+              spacing: 8,
               children: [
                 Text(value,
                     style: TextStyle(
                         fontSize: 56,
                         fontWeight: FontWeight.w700,
                         color: color)),
-                const SizedBox(width: 8),
-                Text(unit,
-                    style: TextStyle(fontSize: 22, color: color)),
+                Text(unit, style: TextStyle(fontSize: 22, color: color)),
               ],
             ),
           ],
@@ -300,14 +473,14 @@ class _RaceScreenState extends State<RaceScreen> {
           children: [
             Text(label, style: Theme.of(context).textTheme.labelMedium),
             const SizedBox(height: 4),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.end,
+              spacing: 6,
+              runSpacing: 4,
               children: [
                 Text(value,
                     style: const TextStyle(
                         fontSize: 28, fontWeight: FontWeight.w600)),
-                const SizedBox(width: 6),
                 Text(unit, style: Theme.of(context).textTheme.bodyMedium),
               ],
             ),
