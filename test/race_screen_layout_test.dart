@@ -1,0 +1,205 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart';
+
+import 'package:sail_race_computer/models/course.dart';
+import 'package:sail_race_computer/screens/race_screen.dart';
+import 'package:sail_race_computer/services/position_source.dart';
+import 'package:sail_race_computer/utils/geo.dart';
+
+// ---------------------------------------------------------------------------
+// Fake position source that emits a single canned fix for tests.
+// ---------------------------------------------------------------------------
+
+class _FakePositionSource implements PositionSource {
+  _FakePositionSource(this._fix);
+
+  final Position _fix;
+  final _controller = StreamController<Position>();
+
+  @override
+  Stream<Position> get stream => _controller.stream;
+
+  @override
+  Future<String?> ensureReady() async {
+    _controller.add(_fix);
+    return null; // no error
+  }
+
+  @override
+  Future<void> dispose() => _controller.close();
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Creates a [Position] with sensible defaults for the fields we don't care
+/// about in layout tests.
+Position _makePosition({
+  double lat = 41.88,
+  double lng = -87.62,
+  double speed = 2.6, // m/s ≈ 5 kn
+  double heading = 45.0,
+  double accuracy = 5.0,
+}) =>
+    Position(
+      latitude: lat,
+      longitude: lng,
+      timestamp: DateTime(2024, 6, 1),
+      accuracy: accuracy,
+      altitude: 0,
+      altitudeAccuracy: 0,
+      heading: heading,
+      headingAccuracy: 0,
+      speed: speed,
+      speedAccuracy: 0,
+    );
+
+/// Builds the [RaceScreen] inside a [MaterialApp] with a controlled
+/// [MediaQuery] so we can simulate portrait or landscape.
+Widget _buildRaceScreen({
+  required Course course,
+  required Position fix,
+  required Size screenSize,
+}) {
+  return MaterialApp(
+    home: MediaQuery(
+      data: MediaQueryData(size: screenSize),
+      child: RaceScreen(
+        course: course,
+        positionSource: _FakePositionSource(fix),
+      ),
+    ),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+void main() {
+  const portrait = Size(390, 844); // typical phone portrait
+  const landscape = Size(844, 390); // typical phone landscape
+
+  final course = Course(name: 'Test', buoys: [
+    Buoy(
+      name: 'Alpha',
+      position: const LatLng(41.90, -87.62),
+      roundingRadiusM: 25,
+    ),
+    Buoy(
+      name: 'Beta',
+      position: const LatLng(41.92, -87.60),
+      roundingRadiusM: 25,
+    ),
+  ]);
+
+  final fix = _makePosition();
+
+  group('RaceScreen portrait layout', () {
+    testWidgets('shows mark name and VMG label', (tester) async {
+      await tester.pumpWidget(
+          _buildRaceScreen(course: course, fix: fix, screenSize: portrait));
+      await tester.pump();
+
+      // Mark header
+      expect(find.text('Alpha'), findsOneWidget);
+      // VMG big-metric label
+      expect(find.text('VMG to mark'), findsOneWidget);
+    });
+
+    testWidgets('shows all secondary metric labels', (tester) async {
+      await tester.pumpWidget(
+          _buildRaceScreen(course: course, fix: fix, screenSize: portrait));
+      await tester.pump();
+
+      expect(find.text('Distance'), findsOneWidget);
+      expect(find.text('Bearing'), findsOneWidget);
+      expect(find.text('SOG'), findsOneWidget);
+      expect(find.text('COG'), findsOneWidget);
+      expect(find.text('ETA at current VMG'), findsOneWidget);
+    });
+
+    testWidgets('shows Previous and Next mark navigation buttons',
+        (tester) async {
+      await tester.pumpWidget(
+          _buildRaceScreen(course: course, fix: fix, screenSize: portrait));
+      await tester.pump();
+
+      expect(find.text('Previous'), findsOneWidget);
+      expect(find.text('Next mark'), findsOneWidget);
+    });
+  });
+
+  group('RaceScreen landscape layout', () {
+    testWidgets('shows mark name and VMG label', (tester) async {
+      await tester.pumpWidget(
+          _buildRaceScreen(course: course, fix: fix, screenSize: landscape));
+      await tester.pump();
+
+      expect(find.text('Alpha'), findsOneWidget);
+      expect(find.text('VMG to mark'), findsOneWidget);
+    });
+
+    testWidgets('shows all secondary metric labels', (tester) async {
+      await tester.pumpWidget(
+          _buildRaceScreen(course: course, fix: fix, screenSize: landscape));
+      await tester.pump();
+
+      expect(find.text('Distance'), findsOneWidget);
+      expect(find.text('Bearing'), findsOneWidget);
+      expect(find.text('SOG'), findsOneWidget);
+      expect(find.text('COG'), findsOneWidget);
+      expect(find.text('ETA at current VMG'), findsOneWidget);
+    });
+
+    testWidgets('shows Previous and Next mark navigation buttons',
+        (tester) async {
+      await tester.pumpWidget(
+          _buildRaceScreen(course: course, fix: fix, screenSize: landscape));
+      await tester.pump();
+
+      expect(find.text('Previous'), findsOneWidget);
+      expect(find.text('Next mark'), findsOneWidget);
+    });
+
+    testWidgets('VMG widget is horizontally centred (in the middle column)',
+        (tester) async {
+      // Use a fixed window size so pixel positions are deterministic.
+      tester.view.physicalSize = landscape * tester.view.devicePixelRatio;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+          _buildRaceScreen(course: course, fix: fix, screenSize: landscape));
+      await tester.pump();
+
+      // Find the big VMG Card by its label text.
+      final vmgLabel = find.text('VMG to mark');
+      expect(vmgLabel, findsOneWidget);
+
+      final screenWidth = landscape.width;
+      final vmgCenter = tester.getCenter(vmgLabel);
+
+      // The VMG widget should be within the middle third of the screen width.
+      expect(vmgCenter.dx, greaterThan(screenWidth / 3));
+      expect(vmgCenter.dx, lessThan(screenWidth * 2 / 3));
+    });
+  });
+
+  group('RaceScreen empty course', () {
+    testWidgets('shows prompt when no buoys', (tester) async {
+      final empty = Course(name: 'Empty', buoys: []);
+      await tester.pumpWidget(MaterialApp(
+        home: RaceScreen(
+          course: empty,
+          positionSource: _FakePositionSource(fix),
+        ),
+      ));
+      expect(find.text('Add buoys on the Course tab first.'), findsOneWidget);
+    });
+  });
+}
