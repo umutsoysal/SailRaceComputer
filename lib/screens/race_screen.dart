@@ -5,6 +5,8 @@ import '../models/course.dart';
 import '../services/position_source.dart';
 import '../utils/geo.dart';
 
+enum _RaceState { stopped, running, paused }
+
 /// Live race screen — shows the next mark with bearing, distance, SOG, COG,
 /// and VMG toward the mark.
 class RaceScreen extends StatefulWidget {
@@ -29,6 +31,7 @@ class _RaceScreenState extends State<RaceScreen> {
   String? _error;
   int _currentMark = 0;
   bool _autoAdvance = true;
+  _RaceState _raceState = _RaceState.stopped;
 
   @override
   void initState() {
@@ -40,7 +43,6 @@ class _RaceScreenState extends State<RaceScreen> {
       _source = GeolocatorPositionSource();
       _ownsSource = true;
     }
-    _start();
   }
 
   @override
@@ -50,19 +52,53 @@ class _RaceScreenState extends State<RaceScreen> {
     super.dispose();
   }
 
-  Future<void> _start() async {
+  Future<void> _startRace() async {
     try {
+      await _sub?.cancel();
+      if (!mounted) return;
+      setState(() {
+        _error = null;
+        _raceState = _RaceState.running;
+      });
       final err = await _source.ensureReady();
+      if (!mounted) return;
       if (err != null) {
-        setState(() => _error = err);
+        setState(() {
+          _error = err;
+          _raceState = _RaceState.stopped;
+        });
         return;
       }
       _sub = _source.stream.listen(_onFix, onError: (e) {
+        if (!mounted) return;
         setState(() => _error = e.toString());
       });
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _raceState = _RaceState.stopped;
+      });
     }
+  }
+
+  Future<void> _pauseRace() async {
+    await _sub?.cancel();
+    _sub = null;
+    if (!mounted) return;
+    setState(() => _raceState = _RaceState.paused);
+  }
+
+  Future<void> _stopRace() async {
+    await _sub?.cancel();
+    _sub = null;
+    if (!mounted) return;
+    setState(() {
+      _raceState = _RaceState.stopped;
+      _currentMark = 0;
+      _pos = null;
+      _error = null;
+    });
   }
 
   void _onFix(Position p) {
@@ -128,6 +164,25 @@ class _RaceScreenState extends State<RaceScreen> {
               onChanged: (v) => setState(() => _autoAdvance = v),
             ),
           ]),
+          IconButton(
+            tooltip: switch (_raceState) {
+              _RaceState.running => 'Pause race',
+              _RaceState.paused => 'Resume race',
+              _RaceState.stopped => 'Start race',
+            },
+            icon: Icon(_raceState == _RaceState.running
+                ? Icons.pause
+                : Icons.play_arrow),
+            onPressed: _raceState == _RaceState.running
+                ? _pauseRace
+                : _startRace,
+          ),
+          IconButton(
+            tooltip: 'Stop race',
+            icon: const Icon(Icons.stop),
+            onPressed:
+                _raceState == _RaceState.stopped ? null : _stopRace,
+          ),
         ],
       ),
       body: SafeArea(
@@ -188,7 +243,12 @@ class _RaceScreenState extends State<RaceScreen> {
                 children: [
                   _markHeader(mark),
                   const SizedBox(height: 16),
-                  if (_error != null)
+                  if (_raceState == _RaceState.stopped)
+                    _statusCard(
+                      title: 'Race stopped',
+                      message: 'Press Start to begin VMG tracking.',
+                    )
+                  else if (_error != null)
                     _errorCard(_error!)
                   else if (fix == null)
                     const _Waiting()
@@ -297,16 +357,21 @@ class _RaceScreenState extends State<RaceScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
             child: Center(
-              child: _error != null
-                  ? _errorCard(_error!)
-                  : fix == null
-                      ? const _Waiting()
-                      : _bigMetric(
-                          label: 'VMG to mark',
-                          value: msToKnots(vmg).toStringAsFixed(2),
-                          unit: 'kn',
-                          good: vmg > 0,
-                        ),
+              child: _raceState == _RaceState.stopped
+                  ? _statusCard(
+                      title: 'Race stopped',
+                      message: 'Press Start to begin VMG tracking.',
+                    )
+                  : _error != null
+                      ? _errorCard(_error!)
+                      : fix == null
+                          ? const _Waiting()
+                          : _bigMetric(
+                              label: 'VMG to mark',
+                              value: msToKnots(vmg).toStringAsFixed(2),
+                              unit: 'kn',
+                              good: vmg > 0,
+                            ),
             ),
           ),
         ),
@@ -316,7 +381,9 @@ class _RaceScreenState extends State<RaceScreen> {
           flex: 4,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(6, 12, 12, 12),
-            child: (_error != null || fix == null)
+            child: (_raceState == _RaceState.stopped ||
+                    _error != null ||
+                    fix == null)
                 ? const SizedBox.shrink()
                 : SingleChildScrollView(
                     child: Column(
@@ -499,7 +566,24 @@ class _RaceScreenState extends State<RaceScreen> {
               const Icon(Icons.error_outline, color: Colors.red),
               const SizedBox(width: 12),
               Expanded(child: Text(msg)),
-              TextButton(onPressed: _start, child: const Text('Retry')),
+              TextButton(onPressed: _startRace, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
+
+  Widget _statusCard({required String title, required String message}) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),
