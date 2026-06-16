@@ -62,7 +62,7 @@ Position _makePosition({
 /// [MediaQuery] so we can simulate portrait or landscape.
 Widget _buildRaceScreen({
   required Course course,
-  Position? fix,
+  required Position fix,
   required Size screenSize,
 }) {
   return MaterialApp(
@@ -70,7 +70,7 @@ Widget _buildRaceScreen({
       data: MediaQueryData(size: screenSize),
       child: RaceScreen(
         course: course,
-        positionSource: _FakePositionSource(fix ?? _makePosition()),
+        positionSource: _FakePositionSource(fix),
       ),
     ),
   );

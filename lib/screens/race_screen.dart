@@ -54,11 +54,13 @@ class _RaceScreenState extends State<RaceScreen> {
 
   Future<void> _startRace() async {
     try {
-      await _sub?.cancel();
+      if (_sub != null) {
+        await _sub!.cancel();
+        _sub = null;
+      }
       if (!mounted) return;
       setState(() {
         _error = null;
-        _raceState = _RaceState.running;
       });
       final err = await _source.ensureReady();
       if (!mounted) return;
@@ -69,6 +71,7 @@ class _RaceScreenState extends State<RaceScreen> {
         });
         return;
       }
+      setState(() => _raceState = _RaceState.running);
       _sub = _source.stream.listen(_onFix, onError: (e) {
         if (!mounted) return;
         setState(() => _error = e.toString());
@@ -83,10 +86,35 @@ class _RaceScreenState extends State<RaceScreen> {
   }
 
   Future<void> _pauseRace() async {
-    await _sub?.cancel();
-    _sub = null;
-    if (!mounted) return;
-    setState(() => _raceState = _RaceState.paused);
+    final sub = _sub;
+    if (sub == null) return;
+    try {
+      sub.pause();
+      if (!mounted) return;
+      setState(() {
+        _error = null;
+        _raceState = _RaceState.paused;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString());
+    }
+  }
+
+  Future<void> _resumeRace() async {
+    final sub = _sub;
+    if (sub == null) return;
+    try {
+      sub.resume();
+      if (!mounted) return;
+      setState(() {
+        _error = null;
+        _raceState = _RaceState.running;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString());
+    }
   }
 
   Future<void> _stopRace() async {
@@ -173,9 +201,11 @@ class _RaceScreenState extends State<RaceScreen> {
             icon: Icon(_raceState == _RaceState.running
                 ? Icons.pause
                 : Icons.play_arrow),
-            onPressed: _raceState == _RaceState.running
-                ? _pauseRace
-                : _startRace,
+            onPressed: switch (_raceState) {
+              _RaceState.running => _pauseRace,
+              _RaceState.paused => _resumeRace,
+              _RaceState.stopped => _startRace,
+            },
           ),
           IconButton(
             tooltip: 'Stop race',
