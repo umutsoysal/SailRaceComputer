@@ -1,5 +1,9 @@
 # Race Mate — Sailing Race Computer
 
+[![CI](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/ci.yml/badge.svg)](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/ci.yml)
+[![Deploy Web](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/deploy_web.yml/badge.svg)](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/deploy_web.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 A GPS-powered sailing race companion app for iOS, Android, and Web. Race Mate tracks your boat's position against a pre-defined race course and displays the real-time navigation metrics you need during a regatta.
 
 ---
@@ -238,10 +242,17 @@ VMG is positive when the boat is closing on the mark and negative when opening.
 
 ## Contributing
 
-1. Fork the repository and create a feature branch.
-2. Run `flutter test` and ensure all tests pass before opening a pull request.
-3. Keep new geographic math covered by unit tests in `test/geo_test.dart`.
-4. Course file format changes must update `CourseFile` validation and bump `version`.
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for workflow and quality expectations.
+
+### Repository quality features
+- GitHub Actions CI for formatting, analysis, tests, and coverage artifacts
+- GitHub Pages web deployment workflow
+- Dependabot for pub, Gradle, Bundler, and GitHub Actions updates
+- Issue templates for bug reports and feature requests
+- Pull request template with validation checklist
+- CODEOWNERS, Security Policy, and Code of Conduct
+
+CI/CD setup details are documented in [docs/ci-cd.md](docs/ci-cd.md).
 
 ---
 
