@@ -1,0 +1,39 @@
+{
+  "format": "sail-race-course",
+  "version": 1,
+  "name": "New Course",
+  "createdAt": "2026-06-27T00:00:00Z",
+  "notes": "Template — replace coordinates and buoy names with your own marks. Typical triangle: Start → Windward → Offset → Leeward → Finish. roundingRadiusM is how close the boat must pass before the mark counts.",
+  "buoys": [
+    {
+      "name": "Start",
+      "lat": 0.0,
+      "lng": 0.0,
+      "roundingRadiusM": 30
+    },
+    {
+      "name": "Windward",
+      "lat": 0.0,
+      "lng": 0.0,
+      "roundingRadiusM": 25
+    },
+    {
+      "name": "Offset",
+      "lat": 0.0,
+      "lng": 0.0,
+      "roundingRadiusM": 25
+    },
+    {
+      "name": "Leeward",
+      "lat": 0.0,
+      "lng": 0.0,
+      "roundingRadiusM": 25
+    },
+    {
+      "name": "Finish",
+      "lat": 0.0,
+      "lng": 0.0,
+      "roundingRadiusM": 30
+    }
+  ]
+}

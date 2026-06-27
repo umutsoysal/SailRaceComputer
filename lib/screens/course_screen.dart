@@ -139,8 +139,11 @@ class _CourseScreenState extends State<CourseScreen> {
     try {
       const typeGroup = XTypeGroup(
         label: 'Course',
-        extensions: ['json'],
-        uniformTypeIdentifiers: ['public.json'],
+        extensions: ['srcourse', 'json'],
+        uniformTypeIdentifiers: [
+          'com.sailrace.sail-race-course',
+          'public.json',
+        ],
         mimeTypes: ['application/json'],
       );
       final file = await openFile(acceptedTypeGroups: [typeGroup]);

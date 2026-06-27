@@ -24,7 +24,7 @@ import '../utils/geo.dart';
 class CourseFile {
   static const String formatId = 'sail-race-course';
   static const int currentVersion = 1;
-  static const String fileExtension = 'srcourse.json';
+  static const String fileExtension = 'srcourse';
   static const String mimeType = 'application/json';
 
   /// Serialize a [Course] to the canonical JSON string (pretty-printed,
