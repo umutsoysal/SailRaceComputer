@@ -6,6 +6,8 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Used to compute distance, bearing and VMG to the next race mark.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Used to continue tracking your position and updating race metrics while the app is in the background.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
