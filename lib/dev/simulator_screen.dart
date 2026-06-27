@@ -26,6 +26,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
   SimulatedPositionSource? _posSource;
   int _currentMark = 0;
   bool _autoAdvance = true;
+
   /// When true, the phone preview is rendered in landscape orientation so the
   /// landscape layout of the Race screen can be tested without a physical
   /// device rotation.
@@ -62,8 +63,8 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     setState(() => _course = updated);
     _store.save(updated);
     if (_currentMark >= updated.buoys.length) {
-      setState(() => _currentMark = (updated.buoys.length - 1)
-          .clamp(0, updated.buoys.length));
+      setState(() => _currentMark =
+          (updated.buoys.length - 1).clamp(0, updated.buoys.length));
     }
   }
 
@@ -86,8 +87,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     if (_autoAdvance && _currentMark < course.buoys.length) {
       final mark = course.buoys[_currentMark];
       final d = distanceMeters(_sim.position, mark.position);
-      if (d <= mark.roundingRadiusM &&
-          _currentMark < course.buoys.length - 1) {
+      if (d <= mark.roundingRadiusM && _currentMark < course.buoys.length - 1) {
         setState(() => _currentMark++);
         return;
       }
@@ -130,13 +130,12 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
     }
 
     final mark = course.buoys.isEmpty ? null : course.buoys[_currentMark];
-    final dist = mark == null ? null : distanceMeters(_sim.position, mark.position);
-    final brg = mark == null ? null : bearingDegrees(_sim.position, mark.position);
-    final vmg = (brg == null)
-        ? 0.0
-        : vmgMs(_sim.speedMs, _sim.headingDeg, brg);
-    final etaSec =
-        (vmg > 0.05 && dist != null) ? (dist / vmg).round() : null;
+    final dist =
+        mark == null ? null : distanceMeters(_sim.position, mark.position);
+    final brg =
+        mark == null ? null : bearingDegrees(_sim.position, mark.position);
+    final vmg = (brg == null) ? 0.0 : vmgMs(_sim.speedMs, _sim.headingDeg, brg);
+    final etaSec = (vmg > 0.05 && dist != null) ? (dist / vmg).round() : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -272,6 +271,7 @@ class _SimulatorScreenState extends State<SimulatorScreen> {
 class _PhonePreview extends StatelessWidget {
   const _PhonePreview({required this.child, this.landscape = false});
   final Widget child;
+
   /// When true, the preview frame is rotated to a landscape aspect ratio so
   /// the horizontal-screen layout can be tested on the desk.
   final bool landscape;
@@ -297,8 +297,7 @@ class _PhonePreview extends StatelessWidget {
           height: height,
           decoration: BoxDecoration(
             color: Colors.black,
-            border:
-                Border.all(color: Colors.black87, width: _frameBorderWidth),
+            border: Border.all(color: Colors.black87, width: _frameBorderWidth),
             borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
@@ -368,6 +367,7 @@ class _MapPanel extends StatelessWidget {
             painter.paint(_NoOpCanvas(), size);
             return painter.canvasToLatLng(p);
           }
+
           return GestureDetector(
             onTapDown: (d) {
               final ll = translate(d.localPosition);
@@ -471,11 +471,13 @@ class _ControlPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Row(children: [
             Expanded(
-                child: _metric(context, 'SOG',
-                    sim.speedKnots.toStringAsFixed(2), 'kn')),
+                child: _metric(
+                    context, 'SOG', sim.speedKnots.toStringAsFixed(2), 'kn')),
             const SizedBox(width: 8),
             Expanded(
-                child: _metric(context, 'COG',
+                child: _metric(
+                    context,
+                    'COG',
                     '${sim.headingDeg.toStringAsFixed(0)}°',
                     compass(sim.headingDeg))),
           ]),
@@ -499,7 +501,8 @@ class _ControlPanel extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${sim.headingDeg.toStringAsFixed(0)}°  ${compass(sim.headingDeg)}',
+              Text(
+                  '${sim.headingDeg.toStringAsFixed(0)}°  ${compass(sim.headingDeg)}',
                   style: Theme.of(context).textTheme.titleMedium),
               TextButton(
                 onPressed: () => sim.setHeading(sim.headingDeg - 1),
@@ -603,7 +606,8 @@ class _ControlPanel extends StatelessWidget {
     );
   }
 
-  Widget _metric(BuildContext context, String label, String value, String unit) {
+  Widget _metric(
+      BuildContext context, String label, String value, String unit) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(10),

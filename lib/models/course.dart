@@ -4,6 +4,7 @@ import '../utils/geo.dart';
 class Buoy {
   String name;
   LatLng position;
+
   /// Rounding radius in meters; entering this radius counts as rounded.
   double roundingRadiusM;
 

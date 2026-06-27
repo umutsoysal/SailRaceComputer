@@ -122,8 +122,8 @@ class _RaceScreenState extends State<RaceScreen> {
       _pos = p;
       if (_autoAdvance && _currentMark < widget.course.buoys.length) {
         final mark = widget.course.buoys[_currentMark];
-        final d = distanceMeters(
-            LatLng(p.latitude, p.longitude), mark.position);
+        final d =
+            distanceMeters(LatLng(p.latitude, p.longitude), mark.position);
         if (d <= mark.roundingRadiusM &&
             _currentMark < widget.course.buoys.length - 1) {
           _currentMark++;
@@ -162,12 +162,9 @@ class _RaceScreenState extends State<RaceScreen> {
     final bearing = here == null ? null : bearingDegrees(here, mark.position);
     final sog = fix?.speed ?? 0.0; // m/s
     final cog = fix?.heading ?? 0.0; // degrees true
-    final vmg = (bearing == null)
-        ? 0.0
-        : vmgMs(sog, cog, bearing);
-    final etaSeconds = (vmg > 0.05 && distance != null)
-        ? (distance / vmg).round()
-        : null;
+    final vmg = (bearing == null) ? 0.0 : vmgMs(sog, cog, bearing);
+    final etaSeconds =
+        (vmg > 0.05 && distance != null) ? (distance / vmg).round() : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -198,8 +195,7 @@ class _RaceScreenState extends State<RaceScreen> {
           IconButton(
             tooltip: 'Stop race',
             icon: const Icon(Icons.stop),
-            onPressed:
-                _raceState == _RaceState.stopped ? null : _stopRace,
+            onPressed: _raceState == _RaceState.stopped ? null : _stopRace,
           ),
         ],
       ),
@@ -298,12 +294,12 @@ class _RaceScreenState extends State<RaceScreen> {
                     const SizedBox(height: 12),
                     Row(children: [
                       Expanded(
-                          child: _metric('SOG',
-                              msToKnots(sog).toStringAsFixed(2), 'kn')),
+                          child: _metric(
+                              'SOG', msToKnots(sog).toStringAsFixed(2), 'kn')),
                       const SizedBox(width: 12),
                       Expanded(
-                          child: _metric('COG',
-                              '${cog.toStringAsFixed(0)}°', compass(cog))),
+                          child: _metric('COG', '${cog.toStringAsFixed(0)}°',
+                              compass(cog))),
                     ]),
                     const SizedBox(height: 12),
                     _metric(
@@ -501,8 +497,7 @@ class _RaceScreenState extends State<RaceScreen> {
             Text('Mark ${_currentMark + 1} / ${buoys.length}',
                 style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 4),
-            Text(mark.name,
-                style: Theme.of(context).textTheme.headlineSmall),
+            Text(mark.name, style: Theme.of(context).textTheme.headlineSmall),
             Text(
               '${mark.position.lat.toStringAsFixed(5)}, '
               '${mark.position.lng.toStringAsFixed(5)}  •  '

@@ -76,8 +76,22 @@ double metersToNm(double m) => m / 1852.0;
 /// Compass shorthand for a bearing (e.g. 45 -> "NE").
 String compass(double deg) {
   const dirs = [
-    'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
-    'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW',
+    'N',
+    'NNE',
+    'NE',
+    'ENE',
+    'E',
+    'ESE',
+    'SE',
+    'SSE',
+    'S',
+    'SSW',
+    'SW',
+    'WSW',
+    'W',
+    'WNW',
+    'NW',
+    'NNW',
   ];
   final i = (((deg % 360) / 22.5) + 0.5).floor() % 16;
   return dirs[i];

@@ -33,7 +33,8 @@ class BoatSimulator extends ChangeNotifier {
   void start() {
     if (_running) return;
     _running = true;
-    _timer = Timer.periodic(const Duration(milliseconds: _tickMs), (_) => _tick());
+    _timer =
+        Timer.periodic(const Duration(milliseconds: _tickMs), (_) => _tick());
     notifyListeners();
   }
 

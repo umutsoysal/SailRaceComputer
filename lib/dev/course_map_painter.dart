@@ -178,12 +178,13 @@ class CourseMapPainter extends CustomPainter {
     canvas.restore();
   }
 
-  void _drawArrowHead(Canvas canvas, Offset tip, double headingDeg, Color color) {
+  void _drawArrowHead(
+      Canvas canvas, Offset tip, double headingDeg, Color color) {
     final rad = (headingDeg - 90) * math.pi / 180.0;
-    final left = tip +
-        Offset(math.cos(rad + 2.6) * 10, math.sin(rad + 2.6) * 10);
-    final right = tip +
-        Offset(math.cos(rad - 2.6) * 10, math.sin(rad - 2.6) * 10);
+    final left =
+        tip + Offset(math.cos(rad + 2.6) * 10, math.sin(rad + 2.6) * 10);
+    final right =
+        tip + Offset(math.cos(rad - 2.6) * 10, math.sin(rad - 2.6) * 10);
     final path = Path()
       ..moveTo(tip.dx, tip.dy)
       ..lineTo(left.dx, left.dy)
@@ -222,8 +223,7 @@ class CourseMapPainter extends CustomPainter {
       ..strokeWidth = 2;
     canvas.drawLine(Offset(x, y), Offset(x + widthPx, y), p);
     canvas.drawLine(Offset(x, y - 4), Offset(x, y + 4), p);
-    canvas.drawLine(
-        Offset(x + widthPx, y - 4), Offset(x + widthPx, y + 4), p);
+    canvas.drawLine(Offset(x + widthPx, y - 4), Offset(x + widthPx, y + 4), p);
     _label(canvas, _formatScale(nice), Offset(x + widthPx + 6, y - 8));
   }
 
@@ -233,7 +233,8 @@ class CourseMapPainter extends CustomPainter {
   }
 
   double _niceRound(double v) {
-    final exp = math.pow(10, v.toString().split('.').first.length - 1).toDouble();
+    final exp =
+        math.pow(10, v.toString().split('.').first.length - 1).toDouble();
     for (final mul in const [1, 2, 5, 10]) {
       final candidate = mul * exp;
       if (candidate >= v) return candidate.toDouble();
@@ -246,7 +247,8 @@ class CourseMapPainter extends CustomPainter {
     for (final m in src.computeMetrics()) {
       double d = 0;
       while (d < m.length) {
-        out.addPath(m.extractPath(d, math.min(d + dash, m.length)), Offset.zero);
+        out.addPath(
+            m.extractPath(d, math.min(d + dash, m.length)), Offset.zero);
         d += dash + gap;
       }
     }
@@ -313,17 +315,16 @@ class _Projection {
     final metersPerDegLat = 111320.0;
     final metersPerDegLng = 111320.0 * math.cos(centerLat * math.pi / 180.0);
 
-    var spanMetersX = math.max(
-        (maxLng - minLng) * metersPerDegLng, minSpanMeters);
-    var spanMetersY = math.max(
-        (maxLat - minLat) * metersPerDegLat, minSpanMeters);
+    var spanMetersX =
+        math.max((maxLng - minLng) * metersPerDegLng, minSpanMeters);
+    var spanMetersY =
+        math.max((maxLat - minLat) * metersPerDegLat, minSpanMeters);
     if (spanMetersX == 0) spanMetersX = minSpanMeters;
     if (spanMetersY == 0) spanMetersY = minSpanMeters;
 
     final usableW = math.max(1.0, size.width - 2 * paddingPx);
     final usableH = math.max(1.0, size.height - 2 * paddingPx);
-    final pxPerMeter =
-        math.min(usableW / spanMetersX, usableH / spanMetersY);
+    final pxPerMeter = math.min(usableW / spanMetersX, usableH / spanMetersY);
 
     return _Projection(
       centerLat: centerLat,

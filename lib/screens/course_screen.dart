@@ -177,8 +177,7 @@ class _CourseScreenState extends State<CourseScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
             child: const Text('Import'),
@@ -201,8 +200,7 @@ class _CourseScreenState extends State<CourseScreen> {
               context: context,
               builder: (ctx) => AlertDialog(
                 title: const Text('Import course'),
-                content: Text(
-                    'Replace the current course "${_course.name}" '
+                content: Text('Replace the current course "${_course.name}" '
                     '(${_course.buoys.length} buoys) with '
                     '"${imported.name}" (${imported.buoys.length} buoys)'
                     '${sourceName == null ? '' : ' from $sourceName'}?'),
@@ -228,8 +226,7 @@ class _CourseScreenState extends State<CourseScreen> {
 
   void _snack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   Future<void> _saveCurrentToLibrary() async {
@@ -475,8 +472,8 @@ class _BuoyDialogState extends State<_BuoyDialog> {
               ),
               TextFormField(
                 controller: _radius,
-                decoration: const InputDecoration(
-                    labelText: 'Rounding radius (m)'),
+                decoration:
+                    const InputDecoration(labelText: 'Rounding radius (m)'),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 validator: (s) {

@@ -38,8 +38,7 @@ class CourseFile {
       'format': formatId,
       'version': currentVersion,
       'name': course.name,
-      'createdAt':
-          (createdAt ?? DateTime.now().toUtc()).toIso8601String(),
+      'createdAt': (createdAt ?? DateTime.now().toUtc()).toIso8601String(),
       if (notes != null && notes.isNotEmpty) 'notes': notes,
       'buoys': course.buoys
           .map((b) => {

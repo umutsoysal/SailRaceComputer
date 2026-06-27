@@ -24,7 +24,9 @@ void main() {
     });
 
     test('rejects unknown format', () {
-      expect(() => CourseFile.decode('{"format":"other","version":1,"name":"x","buoys":[]}'),
+      expect(
+          () => CourseFile.decode(
+              '{"format":"other","version":1,"name":"x","buoys":[]}'),
           throwsA(isA<CourseFileException>()));
     });
 
