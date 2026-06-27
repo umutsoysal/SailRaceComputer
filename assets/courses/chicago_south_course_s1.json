@@ -1,0 +1,39 @@
+{
+  "format": "sail-race-course",
+  "version": 1,
+  "name": "Chicago South Course S1",
+  "createdAt": "2026-06-27T00:00:00Z",
+  "notes": "South-side triangle course off Chicago. SA1 start/finish, windward, offset and leeward marks. Typical NE wind sets windward to the NNE.",
+  "buoys": [
+    {
+      "name": "SA1 Start",
+      "lat": 41.852833,
+      "lng": -87.556833,
+      "roundingRadiusM": 30
+    },
+    {
+      "name": "Windward",
+      "lat": 41.871000,
+      "lng": -87.536500,
+      "roundingRadiusM": 25
+    },
+    {
+      "name": "Offset",
+      "lat": 41.871000,
+      "lng": -87.516000,
+      "roundingRadiusM": 25
+    },
+    {
+      "name": "Leeward",
+      "lat": 41.852833,
+      "lng": -87.523500,
+      "roundingRadiusM": 25
+    },
+    {
+      "name": "SA1 Finish",
+      "lat": 41.852833,
+      "lng": -87.556833,
+      "roundingRadiusM": 30
+    }
+  ]
+}

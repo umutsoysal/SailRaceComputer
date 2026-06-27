@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'app_shell.dart';
 import 'models/course.dart';
+import 'services/course_file.dart';
 import 'services/course_store.dart';
 
 void main() {
@@ -31,6 +33,8 @@ class _Home extends StatefulWidget {
 }
 
 class _HomeState extends State<_Home> {
+  static const _fileChannel = MethodChannel('sail_race/file_open');
+
   final _store = CourseStore();
   Course? _course;
 
@@ -38,6 +42,14 @@ class _HomeState extends State<_Home> {
   void initState() {
     super.initState();
     _load();
+    _fileChannel.setMethodCallHandler((call) async {
+      if (call.method == 'openCourse') {
+        _handleIncomingJson(call.arguments as String);
+      }
+    });
+    _fileChannel.invokeMethod<String>('getInitialFile').then((json) {
+      if (json != null && json.isNotEmpty) _handleIncomingJson(json);
+    }).catchError((_) {});
   }
 
   Future<void> _load() async {
@@ -45,6 +57,43 @@ class _HomeState extends State<_Home> {
     setState(() {
       _course = c ?? Course(name: 'My Course', buoys: []);
     });
+  }
+
+  void _handleIncomingJson(String json) {
+    if (!mounted) return;
+    try {
+      final incoming = CourseFile.decode(json);
+      _promptImport(incoming);
+    } on CourseFileException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Invalid course file: $e')),
+      );
+    }
+  }
+
+  Future<void> _promptImport(Course incoming) async {
+    if (!mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Import course?'),
+        content: Text(
+          'Load "${incoming.name}" '
+          '(${incoming.buoys.length} marks) as your current course?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Import'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) _onCourseChanged(incoming);
   }
 
   void _onCourseChanged(Course c) {

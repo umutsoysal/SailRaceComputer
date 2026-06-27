@@ -194,34 +194,48 @@ class _CourseScreenState extends State<CourseScreen> {
   }
 
   Future<void> _applyImported(Course imported, {String? sourceName}) async {
-    final replace = _course.buoys.isEmpty
-        ? true
-        : await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Import course'),
-                content: Text('Replace the current course "${_course.name}" '
-                    '(${_course.buoys.length} buoys) with '
-                    '"${imported.name}" (${imported.buoys.length} buoys)'
-                    '${sourceName == null ? '' : ' from $sourceName'}?'),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Cancel')),
-                  FilledButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Replace')),
-                ],
-              ),
-            ) ??
-            false;
-    if (!replace) return;
-    // Save a copy into the library so the user can switch back.
+    if (!mounted) return;
+    if (_course.buoys.isEmpty) {
+      await _library.save(imported);
+      setState(() => _course = imported);
+      _commit();
+      _snack('Loaded "${imported.name}" (${imported.buoys.length} buoys).');
+      return;
+    }
+    final from = sourceName == null ? '' : ' from $sourceName';
+    final choice = await showDialog<_ImportChoice>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Import course'),
+        content: Text(
+          'Import "${imported.name}" (${imported.buoys.length} marks)$from.\n\n'
+          'Replace your current course, or load it as a new course alongside the current one?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(ctx, _ImportChoice.replace),
+            child: const Text('Replace current'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, _ImportChoice.addNew),
+            child: const Text('New course'),
+          ),
+        ],
+      ),
+    );
+    if (choice == null) return;
+    if (choice == _ImportChoice.addNew) {
+      // Preserve the current course so the user can switch back.
+      await _library.save(_course);
+    }
     await _library.save(imported);
     setState(() => _course = imported);
     _commit();
-    _snack('Loaded "${imported.name}" (${imported.buoys.length} buoys). '
-        'Saved to library.');
+    _snack('Loaded "${imported.name}" (${imported.buoys.length} buoys).');
   }
 
   void _snack(String msg) {
@@ -232,6 +246,58 @@ class _CourseScreenState extends State<CourseScreen> {
   Future<void> _saveCurrentToLibrary() async {
     await _library.save(_course);
     _snack('Saved "${_course.name}" to library.');
+  }
+
+  Future<void> _newCourse() async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('New course'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Course name'),
+          onSubmitted: (v) {
+            if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final n = controller.text.trim();
+              if (n.isNotEmpty) Navigator.pop(ctx, n);
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+    if (name == null) return;
+    if (_course.buoys.isNotEmpty) await _library.save(_course);
+    setState(() => _course = Course(name: name, buoys: []));
+    _commit();
+  }
+
+  Future<void> _exportShareEntry(CourseEntry e) async {
+    final json = CourseFile.encode(e.course);
+    final filename = CourseFile.suggestedFileName(e.course);
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          text: json,
+          subject: e.name,
+          fileNameOverrides: [filename],
+        ),
+      );
+    } catch (err) {
+      if (!mounted) return;
+      _snack('Share failed: $err');
+    }
   }
 
   Future<void> _openLibrary() async {
@@ -248,11 +314,13 @@ class _CourseScreenState extends State<CourseScreen> {
       case _LibraryActionKind.load:
         _applyImported(action.entry!.course,
             sourceName: action.entry!.isBundled ? 'bundled' : 'library');
-        break;
+      case _LibraryActionKind.share:
+        _exportShareEntry(action.entry!);
       case _LibraryActionKind.delete:
         await _library.remove(action.entry!.id);
         _snack('Removed "${action.entry!.name}" from library.');
-        break;
+      case _LibraryActionKind.newCourse:
+        _newCourse();
     }
   }
 
@@ -277,29 +345,34 @@ class _CourseScreenState extends State<CourseScreen> {
             icon: const Icon(Icons.more_vert),
             onSelected: (v) {
               switch (v) {
+                case 'new':
+                  _newCourse();
                 case 'save':
                   _saveCurrentToLibrary();
-                  break;
                 case 'share':
                   _exportShare();
-                  break;
                 case 'view':
                   _exportShowJson();
-                  break;
                 case 'pick':
                   _importFromFile();
-                  break;
                 case 'paste':
                   _importFromPaste();
-                  break;
               }
             },
             itemBuilder: (_) => const [
               PopupMenuItem(
+                value: 'new',
+                child: ListTile(
+                  leading: Icon(Icons.add_circle_outline),
+                  title: Text('New course'),
+                ),
+              ),
+              PopupMenuDivider(),
+              PopupMenuItem(
                 value: 'save',
                 child: ListTile(
                   leading: Icon(Icons.bookmark_add_outlined),
-                  title: Text('Save current to library'),
+                  title: Text('Save to library'),
                 ),
               ),
               PopupMenuDivider(),
@@ -512,13 +585,15 @@ class _BuoyDialogState extends State<_BuoyDialog> {
   }
 }
 
-enum _LibraryActionKind { load, delete }
+enum _LibraryActionKind { load, share, delete, newCourse }
 
 class _LibraryAction {
-  _LibraryAction(this.kind, this.entry);
+  _LibraryAction(this.kind, [this.entry]);
   final _LibraryActionKind kind;
   final CourseEntry? entry;
 }
+
+enum _ImportChoice { replace, addNew }
 
 class _LibrarySheet extends StatelessWidget {
   const _LibrarySheet({required this.entries});
@@ -540,9 +615,25 @@ class _LibrarySheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text('Course library',
-                  style: Theme.of(context).textTheme.titleLarge),
+              padding: const EdgeInsets.fromLTRB(20, 0, 16, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Course library',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  FilledButton.icon(
+                    onPressed: () => Navigator.pop(
+                      context,
+                      _LibraryAction(_LibraryActionKind.newCourse),
+                    ),
+                    icon: const Icon(Icons.add),
+                    label: const Text('New'),
+                  ),
+                ],
+              ),
             ),
             if (entries.isEmpty)
               const Padding(
@@ -559,11 +650,11 @@ class _LibrarySheet extends StatelessWidget {
                   children: [
                     if (bundled.isNotEmpty) ...[
                       _sectionHeader(context, 'Bundled'),
-                      ...bundled.map((e) => _row(context, e, deletable: false)),
+                      ...bundled.map((e) => _row(context, e)),
                     ],
                     if (saved.isNotEmpty) ...[
                       _sectionHeader(context, 'Saved'),
-                      ...saved.map((e) => _row(context, e, deletable: true)),
+                      ...saved.map((e) => _row(context, e)),
                     ],
                   ],
                 ),
@@ -583,27 +674,48 @@ class _LibrarySheet extends StatelessWidget {
                 )),
       );
 
-  Widget _row(BuildContext context, CourseEntry e, {required bool deletable}) {
+  Widget _row(BuildContext context, CourseEntry e) {
     return ListTile(
       leading: CircleAvatar(
         child: Icon(e.isBundled ? Icons.inventory_2_outlined : Icons.bookmark),
       ),
       title: Text(e.name),
-      subtitle: Text('${e.buoyCount} buoy${e.buoyCount == 1 ? '' : 's'}'
-          '${e.isBundled ? ' • bundled' : ''}'),
-      trailing: deletable
-          ? IconButton(
+      subtitle: Text(
+        '${e.buoyCount} mark${e.buoyCount == 1 ? '' : 's'}'
+        '${e.isBundled ? ' · bundled' : ''}',
+      ),
+      onTap: () => Navigator.pop(
+        context,
+        _LibraryAction(_LibraryActionKind.load, e),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.ios_share),
+            tooltip: 'Share',
+            onPressed: () => Navigator.pop(
+              context,
+              _LibraryAction(_LibraryActionKind.share, e),
+            ),
+          ),
+          if (!e.isBundled)
+            IconButton(
               icon: const Icon(Icons.delete_outline),
-              tooltip: 'Remove from library',
+              tooltip: 'Remove',
               onPressed: () => Navigator.pop(
                 context,
                 _LibraryAction(_LibraryActionKind.delete, e),
               ),
-            )
-          : const Icon(Icons.chevron_right),
-      onTap: () => Navigator.pop(
-        context,
-        _LibraryAction(_LibraryActionKind.load, e),
+            ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.pop(
+              context,
+              _LibraryAction(_LibraryActionKind.load, e),
+            ),
+            child: const Text('Load'),
+          ),
+        ],
       ),
     );
   }
