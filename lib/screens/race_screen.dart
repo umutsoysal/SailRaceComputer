@@ -85,40 +85,28 @@ class _RaceScreenState extends State<RaceScreen> {
     }
   }
 
-  Future<void> _pauseRace() async {
-    final sub = _sub;
-    if (sub == null) return;
-    try {
-      sub.pause();
-      if (!mounted) return;
-      setState(() {
-        _error = null;
-        _raceState = _RaceState.paused;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.toString());
-    }
+  void _pauseRace() {
+    if (_sub == null) return;
+    _sub!.pause();
+    if (!mounted) return;
+    setState(() {
+      _error = null;
+      _raceState = _RaceState.paused;
+    });
   }
 
-  Future<void> _resumeRace() async {
-    final sub = _sub;
-    if (sub == null) return;
-    try {
-      sub.resume();
-      if (!mounted) return;
-      setState(() {
-        _error = null;
-        _raceState = _RaceState.running;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.toString());
-    }
+  void _resumeRace() {
+    if (_sub == null) return;
+    _sub!.resume();
+    if (!mounted) return;
+    setState(() {
+      _error = null;
+      _raceState = _RaceState.running;
+    });
   }
 
-  Future<void> _stopRace() async {
-    await _sub?.cancel();
+  void _stopRace() {
+    _sub?.cancel(); // cancel() stops event delivery immediately; no need to await cleanup
     _sub = null;
     if (!mounted) return;
     setState(() {
