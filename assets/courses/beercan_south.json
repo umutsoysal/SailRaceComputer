@@ -1,0 +1,320 @@
+{
+  "format": "sail-race-course",
+  "version": 2,
+  "name": "Columbia YC Wednesday Night Beer Can Series 2026",
+  "createdAt": "2026-06-27T00:00:00Z",
+  "organizingAuthority": {
+    "name": "Columbia Yacht Club",
+    "shortName": "COLYC",
+    "city": "Chicago",
+    "state": "Illinois",
+    "country": "USA"
+  },
+  "raceInfo": {
+    "seriesDates": {
+      "start": "2026-05-20",
+      "end": "2026-09-09"
+    },
+    "firstWarningTimeLocal": "18:40",
+    "timeLimitLocal": "21:00",
+    "vhfChannel": "69",
+    "noticeBoardUrl": "https://theclubspot.com/regatta/loIU4PUhgd",
+    "racingArea": "Chicago Beer Can Race Course, immediately southwest of the Four-Mile Crib",
+    "defaultRounding": "PORT"
+  },
+  "units": {
+    "distance": "nm",
+    "roundingRadius": "m",
+    "heading": "degrees_true"
+  },
+  "buoys": [
+    {
+      "id": "SA7",
+      "name": "SA7 Start/Finish",
+      "lat": 41.852833,
+      "lng": -87.556833,
+      "description": "White and red cylinder marked SA 7",
+      "roundingRadiusM": 30
+    },
+    {
+      "id": "1",
+      "name": "Mark 1",
+      "lat": 41.871,
+      "lng": -87.556833,
+      "description": "White and red cylinder marked 1",
+      "roundingRadiusM": 25
+    },
+    {
+      "id": "2",
+      "name": "Mark 2",
+      "lat": 41.865667,
+      "lng": -87.5395,
+      "description": "White and red cylinder marked 2",
+      "roundingRadiusM": 25
+    },
+    {
+      "id": "3",
+      "name": "Mark 3",
+      "lat": 41.852833,
+      "lng": -87.5325,
+      "description": "White and red cylinder marked 3",
+      "roundingRadiusM": 25
+    },
+    {
+      "id": "4",
+      "name": "Mark 4",
+      "lat": 41.84,
+      "lng": -87.5395,
+      "description": "White and red cylinder marked 4",
+      "roundingRadiusM": 25
+    },
+    {
+      "id": "5",
+      "name": "Mark 5",
+      "lat": 41.834667,
+      "lng": -87.556833,
+      "description": "White and red cylinder marked 5",
+      "roundingRadiusM": 25
+    },
+    {
+      "id": "6",
+      "name": "Mark 6",
+      "lat": 41.84,
+      "lng": -87.574,
+      "description": "White and red cylinder marked 6",
+      "roundingRadiusM": 25
+    },
+    {
+      "id": "7",
+      "name": "Mark 7",
+      "lat": 41.852833,
+      "lng": -87.581167,
+      "description": "White and red cylinder marked 7",
+      "roundingRadiusM": 25
+    },
+    {
+      "id": "8",
+      "name": "Mark 8",
+      "lat": 41.865667,
+      "lng": -87.574,
+      "description": "White and red cylinder marked 8",
+      "roundingRadiusM": 25
+    }
+  ],
+  "courses": [
+    {
+      "id": "L1",
+      "name": "Long Course 1",
+      "type": "Long",
+      "fleet": "All except Green",
+      "distanceNm": 5.37,
+      "turns": [
+        { "buoyId": "SA7", "role": "start", "headingToNext": 0 },
+        { "buoyId": "1", "role": "round", "rounding": "PORT", "headingToNext": 245 },
+        { "buoyId": "8", "role": "round", "rounding": "PORT", "headingToNext": 180 },
+        { "buoyId": "6", "role": "round", "rounding": "PORT", "headingToNext": 110 },
+        { "buoyId": "5", "role": "round", "rounding": "PORT", "headingToNext": 0 },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "L2",
+      "name": "Long Course 2",
+      "type": "Long",
+      "fleet": "All except Green",
+      "distanceNm": 5.37,
+      "turns": [
+        { "buoyId": "SA7", "role": "start", "headingToNext": 45 },
+        { "buoyId": "2", "role": "round", "rounding": "PORT", "headingToNext": 290 },
+        { "buoyId": "1", "role": "round", "rounding": "PORT", "headingToNext": 225 },
+        { "buoyId": "7", "role": "round", "rounding": "PORT", "headingToNext": 160 },
+        { "buoyId": "6", "role": "round", "rounding": "PORT", "headingToNext": 45 },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "L3",
+      "name": "Long Course 3",
+      "type": "Long",
+      "fleet": "All except Green",
+      "distanceNm": 5.37,
+      "turns": [
+        { "buoyId": "SA7", "role": "start", "headingToNext": 90 },
+        { "buoyId": "3", "role": "round", "rounding": "PORT", "headingToNext": 335 },
+        { "buoyId": "2", "role": "round", "rounding": "PORT", "headingToNext": 270 },
+        { "buoyId": "8", "role": "round", "rounding": "PORT", "headingToNext": 200 },
+        { "buoyId": "7", "role": "round", "rounding": "PORT", "headingToNext": 90 },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "L4",
+      "name": "Long Course 4",
+      "type": "Long",
+      "fleet": "All except Green",
+      "distanceNm": 5.37,
+      "turns": [
+        { "buoyId": "SA7", "role": "start", "headingToNext": 135 },
+        { "buoyId": "4", "role": "round", "rounding": "PORT", "headingToNext": 20 },
+        { "buoyId": "3", "role": "round", "rounding": "PORT", "headingToNext": 315 },
+        { "buoyId": "1", "role": "round", "rounding": "PORT", "headingToNext": 245 },
+        { "buoyId": "8", "role": "round", "rounding": "PORT", "headingToNext": 135 },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "L5",
+      "name": "Long Course 5",
+      "type": "Long",
+      "fleet": "All except Green",
+      "distanceNm": 5.37,
+      "turns": [
+        { "buoyId": "SA7", "role": "start", "headingToNext": 180 },
+        { "buoyId": "5", "role": "round", "rounding": "PORT", "headingToNext": 65 },
+        { "buoyId": "4", "role": "round", "rounding": "PORT", "headingToNext": 0 },
+        { "buoyId": "2", "role": "round", "rounding": "PORT", "headingToNext": 290 },
+        { "buoyId": "1", "role": "round", "rounding": "PORT", "headingToNext": 180 },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "L6",
+      "name": "Long Course 6",
+      "type": "Long",
+      "fleet": "All except Green",
+      "distanceNm": 5.37,
+      "turns": [
+        { "buoyId": "SA7", "role": "start", "headingToNext": 225 },
+        { "buoyId": "6", "role": "round", "rounding": "PORT", "headingToNext": 110 },
+        { "buoyId": "5", "role": "round", "rounding": "PORT", "headingToNext": 45 },
+        { "buoyId": "3", "role": "round", "rounding": "PORT", "headingToNext": 335 },
+        { "buoyId": "2", "role": "round", "rounding": "PORT", "headingToNext": 225 },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "L7",
+      "name": "Long Course 7",
+      "type": "Long",
+      "fleet": "All except Green",
+      "distanceNm": 5.37,
+      "turns": [
+        { "buoyId": "SA7", "role": "start", "headingToNext": 270 },
+        { "buoyId": "7", "role": "round", "rounding": "PORT", "headingToNext": 155 },
+        { "buoyId": "6", "role": "round", "rounding": "PORT", "headingToNext": 90 },
+        { "buoyId": "4", "role": "round", "rounding": "PORT", "headingToNext": 20 },
+        { "buoyId": "3", "role": "round", "rounding": "PORT", "headingToNext": 270 },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "L8",
+      "name": "Long Course 8",
+      "type": "Long",
+      "fleet": "All except Green",
+      "distanceNm": 5.37,
+      "turns": [
+        { "buoyId": "SA7", "role": "start", "headingToNext": 315 },
+        { "buoyId": "8", "role": "round", "rounding": "PORT", "headingToNext": 200 },
+        { "buoyId": "7", "role": "round", "rounding": "PORT", "headingToNext": 135 },
+        { "buoyId": "5", "role": "round", "rounding": "PORT", "headingToNext": 65 },
+        { "buoyId": "4", "role": "round", "rounding": "PORT", "headingToNext": 315 },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+
+    {
+      "id": "S1",
+      "name": "Short Course 1",
+      "type": "Short",
+      "fleet": "All except Green",
+      "distanceNm": 4.55,
+      "turns": [
+        { "buoyId": "SA7", "role": "start", "headingToNext": 0 },
+        { "buoyId": "1", "role": "round", "rounding": "PORT", "headingToNext": 245 },
+        { "buoyId": "8", "role": "round", "rounding": "PORT", "headingToNext": 180 },
+        { "buoyId": "6", "role": "round", "rounding": "PORT", "headingToNext": 45 },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "S2",
+      "name": "Short Course 2",
+      "type": "Short",
+      "fleet": "All except Green",
+      "distanceNm": 4.55,
+      "turns": [
+        { "buoyId": "SA7", "role": "start", "headingToNext": 45 },
+        { "buoyId": "2", "role": "round", "rounding": "PORT", "headingToNext": 290 },
+        { "buoyId": "1", "role": "round", "rounding": "PORT", "headingToNext": 225 },
+        { "buoyId": "7", "role": "round", "rounding": "PORT", "headingToNext": 90 },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "S3",
+      "name": "Short Course 3",
+      "type": "Short",
+      "fleet": "All except Green",
+      "distanceNm": 4.55,
+      "turns": [
+        { "buoyId": "SA7", "role": "start", "headingToNext": 90 },
+        { "buoyId": "3", "role": "round", "rounding": "PORT", "headingToNext": 335 },
+        { "buoyId": "2", "role": "round", "rounding": "PORT", "headingToNext": 270 },
+        { "buoyId": "8", "role": "round", "rounding": "PORT", "headingToNext": 135 },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+
+    {
+      "id": "S4",
+      "name": "Short Course 4",
+      "type": "Short",
+      "fleet": "All except Green",
+      "distanceNm": 4.55,
+      "route": ["SA7", "4", "3", "1", "SA7"],
+      "headings": [135, 20, 315, 180],
+      "rounding": "PORT"
+    },
+    {
+      "id": "S5",
+      "name": "Short Course 5",
+      "type": "Short",
+      "fleet": "All except Green",
+      "distanceNm": 4.55,
+      "route": ["SA7", "5", "4", "2", "SA7"],
+      "headings": [180, 65, 0, 225],
+      "rounding": "PORT"
+    },
+    {
+      "id": "S6",
+      "name": "Short Course 6",
+      "type": "Short",
+      "fleet": "All except Green",
+      "distanceNm": 4.55,
+      "route": ["SA7", "6", "5", "3", "SA7"],
+      "headings": [225, 110, 45, 270],
+      "rounding": "PORT"
+    },
+    {
+      "id": "S7",
+      "name": "Short Course 7",
+      "type": "Short",
+      "fleet": "All except Green",
+      "distanceNm": 4.55,
+      "route": ["SA7", "7", "6", "4", "SA7"],
+      "headings": [270, 155, 90, 315],
+      "rounding": "PORT"
+    },
+    {
+      "id": "S8",
+      "name": "Short Course 8",
+      "type": "Short",
+      "fleet": "All except Green",
+      "distanceNm": 4.55,
+      "route": ["SA7", "8", "7", "5", "SA7"],
+      "headings": [315, 200, 135, 360],
+      "rounding": "PORT"
+    }
+  ]
+}
