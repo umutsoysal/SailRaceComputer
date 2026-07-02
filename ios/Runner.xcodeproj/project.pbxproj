@@ -204,6 +204,7 @@
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
+				7884E86B2EC3CC0900C636F2 /* Fix Simulator Slices */,
 				4B4EC3DDD4475172BC0C169E /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
@@ -367,6 +368,21 @@
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
+		};
+		7884E86B2EC3CC0900C636F2 /* Fix Simulator Slices */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Fix Simulator Slices";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Fix simulator platform tag in Dart frameworks (e.g. objective_c.framework)\nFRAMEWORKS=\"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}\"\nfor fw in \"${FRAMEWORKS}\"/*.framework; do\n  name=\"${fw%.framework}\"\n  name=\"${name##*/}\"\n  binary=\"${fw}/${name}\"\n  if [ -f \"${binary}\" ]; then\n    if xcrun vtool -show \"${binary}\" 2>/dev/null | grep -q \"IOSSIMULATOR\"; then\n      echo \"Fixing IOSSIMULATOR platform in: ${binary}\"\n      xcrun vtool -set-build-version ios 16.0 16.0 -replace -output \"${binary}\" \"${binary}\"\n    fi\n  fi\ndone\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

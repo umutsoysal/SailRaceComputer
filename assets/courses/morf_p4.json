@@ -1,0 +1,17 @@
+{
+  "format": "sail-race-course",
+  "version": 1,
+  "name": "MORF Trapezoidal P4",
+  "createdAt": "2026-06-27T00:00:00Z",
+  "notes": "P4: SA7 → 4 → 3 → 1 → 3 → 1 → 8 → SA7. 8.48 NM. All marks to port.",
+  "buoys": [
+    { "name": "Start / SA7", "lat": 41.852833, "lng": -87.556833, "roundingRadiusM": 30 },
+    { "name": "Mark 4", "lat": 41.840000, "lng": -87.539500, "roundingRadiusM": 25 },
+    { "name": "Mark 3", "lat": 41.852833, "lng": -87.532500, "roundingRadiusM": 25 },
+    { "name": "Mark 1", "lat": 41.871000, "lng": -87.556833, "roundingRadiusM": 25 },
+    { "name": "Mark 3", "lat": 41.852833, "lng": -87.532500, "roundingRadiusM": 25 },
+    { "name": "Mark 1", "lat": 41.871000, "lng": -87.556833, "roundingRadiusM": 25 },
+    { "name": "Mark 8", "lat": 41.865667, "lng": -87.574000, "roundingRadiusM": 25 },
+    { "name": "Finish / SA7", "lat": 41.852833, "lng": -87.556833, "roundingRadiusM": 30 }
+  ]
+}
