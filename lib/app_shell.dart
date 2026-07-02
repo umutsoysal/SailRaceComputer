@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'models/course.dart';
 import 'screens/course_screen.dart';
+import 'screens/map_screen.dart';
 import 'screens/race_screen.dart';
 import 'services/position_source.dart';
 
@@ -39,6 +40,10 @@ class _AppShellState extends State<AppShell> {
             course: widget.course,
             onChanged: widget.onCourseChanged,
           ),
+          MapScreen(
+            course: widget.course,
+            positionSource: widget.positionSource,
+          ),
           RaceScreen(
             course: widget.course,
             positionSource: widget.positionSource,
@@ -53,6 +58,11 @@ class _AppShellState extends State<AppShell> {
             icon: Icon(Icons.flag_outlined),
             selectedIcon: Icon(Icons.flag),
             label: 'Course',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.map_outlined),
+            selectedIcon: Icon(Icons.map),
+            label: 'Map',
           ),
           NavigationDestination(
             icon: Icon(Icons.speed_outlined),
