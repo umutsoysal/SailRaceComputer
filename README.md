@@ -151,21 +151,31 @@ Courses are stored and shared as `.srcourse.json` files. The format is intention
 ```json
 {
   "format": "sail-race-course",
-  "version": 1,
-  "name": "Demo Chicago",
+  "version": 2,
+  "name": "Wednesday Series",
   "createdAt": "2026-06-04T12:00:00Z",
-  "notes": "Four-mark course in Lake Michigan",
+  "notes": "Reusable buoy catalog plus multiple race layouts",
   "buoys": [
     {
+      "id": "sa7",
+      "name": "Start / Finish",
+      "lat": 41.852833,
+      "lng": -87.556833,
+      "roundingRadiusM": 30
+    },
+    {
+      "id": "m1",
       "name": "Windward",
       "lat": 41.892,
       "lng": -87.6101,
       "roundingRadiusM": 25
-    },
+    }
+  ],
+  "courses": [
     {
-      "name": "Leeward",
-      "lat": 41.8855,
-      "lng": -87.609
+      "id": "L1",
+      "name": "Long Course 1",
+      "route": ["sa7", "m1", "sa7"]
     }
   ]
 }
@@ -173,10 +183,14 @@ Courses are stored and shared as `.srcourse.json` files. The format is intention
 
 **Validation rules applied on import:**
 - `format` must equal `"sail-race-course"`
-- `version` must equal `1`
+- `version` may be `1` or `2`; v1 still imports for backward compatibility
 - `lat` must be in `[-90, 90]`
 - `lng` must be in `[-180, 180]`
 - `roundingRadiusM` defaults to `25.0` if omitted
+- In v2, `buoys[].id` and `courses[].id` must be unique
+- In v2, each course must define either `turns` or `route`, and every referenced buoy id must exist
+
+When a v2 file contains multiple courses, the app prompts you to choose which layout to load.
 
 Filenames are auto-slugified: `"My Cool Race!!"` → `my-cool-race.srcourse.json`.
 

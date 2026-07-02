@@ -4,6 +4,7 @@ import 'app_shell.dart';
 import 'models/course.dart';
 import 'services/course_file.dart';
 import 'services/course_store.dart';
+import 'widgets/imported_course_picker_dialog.dart';
 
 void main() {
   runApp(const SailRaceApp());
@@ -62,8 +63,10 @@ class _HomeState extends State<_Home> {
   void _handleIncomingJson(String json) {
     if (!mounted) return;
     try {
-      final incoming = CourseFile.decode(json);
-      _promptImport(incoming);
+      final bundle = CourseFile.decodeBundle(json);
+      pickImportedCourse(context, bundle).then((selected) {
+        if (selected != null) _promptImport(selected.course);
+      });
     } on CourseFileException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Invalid course file: $e')),
