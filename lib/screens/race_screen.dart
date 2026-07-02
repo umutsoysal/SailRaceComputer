@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/course.dart';
 import '../services/position_source.dart';
+import '../services/race_session_store.dart';
 import '../utils/geo.dart';
 
-enum _RaceState { stopped, running, paused }
+enum _RaceState { stopped, running, paused, finished }
 
 /// Live race screen — shows the next mark with bearing, distance, SOG, COG,
 /// and VMG toward the mark.
@@ -27,11 +28,16 @@ class _RaceScreenState extends State<RaceScreen> {
   StreamSubscription<Position>? _sub;
   late final PositionSource _source;
   late final bool _ownsSource;
+  final _sessionStore = RaceSessionStore();
   Position? _pos;
   String? _error;
   int _currentMark = 0;
   bool _autoAdvance = true;
   _RaceState _raceState = _RaceState.stopped;
+  DateTime? _raceStartedAt;
+  String? _finishMessage;
+  bool _finishingRace = false;
+  final List<RaceTrackPoint> _track = [];
 
   @override
   void initState() {
@@ -55,12 +61,19 @@ class _RaceScreenState extends State<RaceScreen> {
   Future<void> _startRace() async {
     try {
       if (_sub != null) {
-        await _sub!.cancel();
+        final oldSub = _sub;
         _sub = null;
+        unawaited(oldSub?.cancel());
       }
       if (!mounted) return;
       setState(() {
         _error = null;
+        _finishMessage = null;
+        _raceStartedAt = DateTime.now().toUtc();
+        _currentMark = 0;
+        _pos = null;
+        _track.clear();
+        _finishingRace = false;
       });
       final err = await _source.ensureReady();
       if (!mounted) return;
@@ -105,31 +118,94 @@ class _RaceScreenState extends State<RaceScreen> {
     });
   }
 
-  void _stopRace() {
-    _sub?.cancel(); // cancel() stops event delivery immediately; no need to await cleanup
+  Future<void> _finishRace({bool completedCourse = false}) async {
+    if (_finishingRace || _raceStartedAt == null) return;
+    _finishingRace = true;
+
+    final finishedAt = DateTime.now().toUtc();
+    final pointCount = _track.length;
+    final duration = finishedAt.difference(_raceStartedAt!);
+    final finishMessage = _buildFinishMessage(
+      completedCourse: completedCourse,
+      pointCount: pointCount,
+      duration: duration,
+    );
+    final record = RaceSessionRecord(
+      courseName: widget.course.name,
+      startedAt: _raceStartedAt!,
+      finishedAt: finishedAt,
+      totalMarks: widget.course.buoys.length,
+      finalMarkIndex: _currentMark,
+      completedCourse: completedCourse,
+      track: List<RaceTrackPoint>.unmodifiable(_track),
+    );
+
+    _sub?.pause();
+    if (mounted) {
+      setState(() {
+        _raceState = _RaceState.finished;
+        _error = null;
+        _finishMessage = finishMessage;
+      });
+    }
+
+    await _sub?.cancel();
     _sub = null;
-    if (!mounted) return;
-    setState(() {
-      _raceState = _RaceState.stopped;
-      _currentMark = 0;
-      _pos = null;
-      _error = null;
-    });
+    try {
+      await _sessionStore.saveCompleted(record);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(finishMessage)));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _raceState = _RaceState.paused;
+        _error = 'Could not save race data: $e';
+      });
+      _finishingRace = false;
+    }
+  }
+
+  String _buildFinishMessage({
+    required bool completedCourse,
+    required int pointCount,
+    required Duration duration,
+  }) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    final durationText =
+        minutes > 0 ? '${minutes}m ${seconds}s' : '${seconds}s';
+    final summary =
+        pointCount == 1 ? 'Saved 1 GPS point' : 'Saved $pointCount GPS points';
+    if (completedCourse) {
+      return 'Race finished. $summary over $durationText. GPX added to library.';
+    }
+    return 'Race saved. $summary over $durationText. GPX added to library.';
   }
 
   void _onFix(Position p) {
+    final point = RaceTrackPoint.fromPosition(p);
+    var reachedFinish = false;
     setState(() {
       _pos = p;
+      _track.add(point);
       if (_autoAdvance && _currentMark < widget.course.buoys.length) {
         final mark = widget.course.buoys[_currentMark];
         final d =
             distanceMeters(LatLng(p.latitude, p.longitude), mark.position);
-        if (d <= mark.roundingRadiusM &&
-            _currentMark < widget.course.buoys.length - 1) {
-          _currentMark++;
+        if (d <= mark.roundingRadiusM) {
+          if (_currentMark < widget.course.buoys.length - 1) {
+            _currentMark++;
+          } else if (_raceState == _RaceState.running) {
+            reachedFinish = true;
+          }
         }
       }
     });
+    if (reachedFinish) {
+      unawaited(_finishRace(completedCourse: true));
+    }
   }
 
   void _prev() {
@@ -182,6 +258,7 @@ class _RaceScreenState extends State<RaceScreen> {
               _RaceState.running => 'Pause race',
               _RaceState.paused => 'Resume race',
               _RaceState.stopped => 'Start race',
+              _RaceState.finished => 'Start new race',
             },
             icon: Icon(_raceState == _RaceState.running
                 ? Icons.pause
@@ -190,12 +267,18 @@ class _RaceScreenState extends State<RaceScreen> {
               _RaceState.running => _pauseRace,
               _RaceState.paused => _resumeRace,
               _RaceState.stopped => _startRace,
+              _RaceState.finished => _startRace,
             },
           ),
           IconButton(
-            tooltip: 'Stop race',
-            icon: const Icon(Icons.stop),
-            onPressed: _raceState == _RaceState.stopped ? null : _stopRace,
+            tooltip: 'Finish race',
+            icon: const Icon(Icons.flag),
+            onPressed: switch (_raceState) {
+              _RaceState.running => () => _finishRace(),
+              _RaceState.paused => () => _finishRace(),
+              _RaceState.stopped => null,
+              _RaceState.finished => null,
+            },
           ),
         ],
       ),
@@ -260,7 +343,13 @@ class _RaceScreenState extends State<RaceScreen> {
                   if (_raceState == _RaceState.stopped)
                     _statusCard(
                       title: 'Race stopped',
-                      message: 'Press Start to begin VMG tracking.',
+                      message:
+                          'Press Start to begin race tracking and record your GPS track.',
+                    )
+                  else if (_raceState == _RaceState.finished)
+                    _statusCard(
+                      title: 'Race finished',
+                      message: _finishMessage ?? 'Race saved.',
                     )
                   else if (_error != null)
                     _errorCard(_error!)
@@ -374,18 +463,24 @@ class _RaceScreenState extends State<RaceScreen> {
               child: _raceState == _RaceState.stopped
                   ? _statusCard(
                       title: 'Race stopped',
-                      message: 'Press Start to begin VMG tracking.',
+                      message:
+                          'Press Start to begin race tracking and record your GPS track.',
                     )
-                  : _error != null
-                      ? _errorCard(_error!)
-                      : fix == null
-                          ? const _Waiting()
-                          : _bigMetric(
-                              label: 'VMG to mark',
-                              value: msToKnots(vmg).toStringAsFixed(2),
-                              unit: 'kn',
-                              good: vmg > 0,
-                            ),
+                  : _raceState == _RaceState.finished
+                      ? _statusCard(
+                          title: 'Race finished',
+                          message: _finishMessage ?? 'Race saved.',
+                        )
+                      : _error != null
+                          ? _errorCard(_error!)
+                          : fix == null
+                              ? const _Waiting()
+                              : _bigMetric(
+                                  label: 'VMG to mark',
+                                  value: msToKnots(vmg).toStringAsFixed(2),
+                                  unit: 'kn',
+                                  good: vmg > 0,
+                                ),
             ),
           ),
         ),
@@ -396,6 +491,7 @@ class _RaceScreenState extends State<RaceScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(6, 12, 12, 12),
             child: (_raceState == _RaceState.stopped ||
+                    _raceState == _RaceState.finished ||
                     _error != null ||
                     fix == null)
                 ? const SizedBox.shrink()

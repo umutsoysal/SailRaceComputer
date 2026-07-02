@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:sail_race_computer/models/course.dart';
 import 'package:sail_race_computer/screens/race_screen.dart';
@@ -17,14 +18,18 @@ class _FakePositionSource implements PositionSource {
   _FakePositionSource(this._fix);
 
   final Position _fix;
-  final _controller = StreamController<Position>();
+  final _controller = StreamController<Position>.broadcast();
 
   @override
   Stream<Position> get stream => _controller.stream;
 
   @override
   Future<String?> ensureReady() async {
-    _controller.add(_fix);
+    Future<void>.delayed(Duration.zero, () {
+      if (!_controller.isClosed) {
+        _controller.add(_fix);
+      }
+    });
     return null; // no error
   }
 
@@ -76,11 +81,21 @@ Widget _buildRaceScreen({
   );
 }
 
+Future<void> _drainAsyncUi(WidgetTester tester) async {
+  await tester.pump();
+  await tester.idle();
+  await tester.pump();
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   const portrait = Size(390, 844); // typical phone portrait
   const landscape = Size(844, 390); // typical phone landscape
   const compactLandscape = Size(640, 360); // simulator/device landscape
@@ -110,7 +125,12 @@ void main() {
       // Mark header
       expect(find.text('Alpha'), findsOneWidget);
       expect(find.text('Race stopped'), findsOneWidget);
-      expect(find.text('Press Start to begin VMG tracking.'), findsOneWidget);
+      expect(
+        find.text(
+          'Press Start to begin race tracking and record your GPS track.',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('VMG to mark'), findsNothing);
     });
 
@@ -119,7 +139,7 @@ void main() {
           _buildRaceScreen(course: course, fix: fix, screenSize: portrait));
       await tester.pump();
       await tester.tap(find.byTooltip('Start race'));
-      await tester.pump();
+      await _drainAsyncUi(tester);
 
       expect(find.text('Distance'), findsOneWidget);
       expect(find.text('Bearing'), findsOneWidget);
@@ -158,7 +178,7 @@ void main() {
           _buildRaceScreen(course: course, fix: fix, screenSize: landscape));
       await tester.pump();
       await tester.tap(find.byTooltip('Start race'));
-      await tester.pump();
+      await _drainAsyncUi(tester);
 
       expect(find.text('Distance'), findsOneWidget);
       expect(find.text('Bearing'), findsOneWidget);
@@ -208,7 +228,7 @@ void main() {
           _buildRaceScreen(course: course, fix: fix, screenSize: landscape));
       await tester.pump();
       await tester.tap(find.byTooltip('Start race'));
-      await tester.pump();
+      await _drainAsyncUi(tester);
 
       // Find the big VMG Card by its label text.
       final vmgLabel = find.text('VMG to mark');
@@ -222,25 +242,27 @@ void main() {
       expect(vmgCenter.dx, lessThan(screenWidth * 2 / 3));
     });
 
-    testWidgets('stop hides VMG and resets back to first mark', (tester) async {
+    testWidgets('finish saves the race and shows the finished state',
+        (tester) async {
       await tester.pumpWidget(
           _buildRaceScreen(course: course, fix: fix, screenSize: landscape));
       await tester.pump();
 
       await tester.tap(find.byTooltip('Start race'));
-      await tester.pump();
+      await _drainAsyncUi(tester);
       await tester.tap(find.text('Next mark'));
       await tester.pump();
 
       expect(find.text('Beta'), findsOneWidget);
       expect(find.text('VMG to mark'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Stop race'));
-      await tester.pump();
+      await tester.tap(find.byTooltip('Finish race'));
+      await _drainAsyncUi(tester);
 
-      expect(find.text('Race stopped'), findsOneWidget);
+      expect(find.text('Race finished'), findsOneWidget);
       expect(find.text('VMG to mark'), findsNothing);
-      expect(find.text('Alpha'), findsOneWidget);
+      expect(find.text('Beta'), findsOneWidget);
+      expect(find.byTooltip('Start new race'), findsOneWidget);
     });
 
     testWidgets('pause switches control to resume without hiding metrics',
@@ -250,7 +272,7 @@ void main() {
       await tester.pump();
 
       await tester.tap(find.byTooltip('Start race'));
-      await tester.pump();
+      await _drainAsyncUi(tester);
 
       expect(find.byTooltip('Pause race'), findsOneWidget);
       expect(find.text('VMG to mark'), findsOneWidget);
@@ -260,6 +282,29 @@ void main() {
 
       expect(find.byTooltip('Resume race'), findsOneWidget);
       expect(find.text('VMG to mark'), findsOneWidget);
+    });
+
+    testWidgets('starting a new race resets back to the first mark',
+        (tester) async {
+      await tester.pumpWidget(
+          _buildRaceScreen(course: course, fix: fix, screenSize: landscape));
+      await tester.pump();
+
+      await tester.tap(find.byTooltip('Start race'));
+      await _drainAsyncUi(tester);
+      await tester.tap(find.text('Next mark'));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Finish race'));
+      await _drainAsyncUi(tester);
+
+      expect(find.text('Beta'), findsOneWidget);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Start new race'));
+      await _drainAsyncUi(tester);
+
+      expect(find.text('Alpha'), findsOneWidget);
+      expect(find.text('Race finished'), findsNothing);
     });
   });
 
@@ -274,5 +319,28 @@ void main() {
       ));
       expect(find.text('Add buoys on the Course tab first.'), findsOneWidget);
     });
+  });
+
+  testWidgets('auto finish saves the race on the last mark', (tester) async {
+    final singleMarkCourse = Course(name: 'Sprint', buoys: [
+      Buoy(
+        name: 'Finish',
+        position: const LatLng(41.88, -87.62),
+        roundingRadiusM: 30,
+      ),
+    ]);
+
+    await tester.pumpWidget(_buildRaceScreen(
+      course: singleMarkCourse,
+      fix: fix,
+      screenSize: portrait,
+    ));
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Start race'));
+    await _drainAsyncUi(tester);
+
+    expect(find.text('Race finished'), findsOneWidget);
+    expect(find.textContaining('Saved 1 GPS point'), findsWidgets);
   });
 }
