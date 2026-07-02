@@ -6,6 +6,7 @@ import '../models/course.dart';
 import '../services/course_file.dart';
 import '../services/course_library.dart';
 import '../utils/geo.dart';
+import '../widgets/imported_course_picker_dialog.dart';
 
 /// Course setup screen — manage the list of buoys for the race.
 class CourseScreen extends StatefulWidget {
@@ -150,7 +151,11 @@ class _CourseScreenState extends State<CourseScreen> {
       if (file == null) return;
       final bytes = await file.readAsBytes();
       final json = utf8.decode(bytes);
-      _applyImported(CourseFile.decode(json), sourceName: file.name);
+      final bundle = CourseFile.decodeBundle(json);
+      final selected =
+          await pickImportedCourse(context, bundle, sourceName: file.name);
+      if (selected == null) return;
+      await _applyImported(selected.course, sourceName: file.name);
     } on CourseFileException catch (e) {
       _snack('Invalid course file: $e');
     } catch (e) {
@@ -173,7 +178,7 @@ class _CourseScreenState extends State<CourseScreen> {
             minLines: 8,
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
-              hintText: '{ "format": "sail-race-course", "version": 1, ... }',
+              hintText: '{ "format": "sail-race-course", "version": 2, ... }',
             ),
             style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
           ),
@@ -190,7 +195,14 @@ class _CourseScreenState extends State<CourseScreen> {
     );
     if (text == null || text.trim().isEmpty) return;
     try {
-      _applyImported(CourseFile.decode(text), sourceName: 'pasted JSON');
+      final bundle = CourseFile.decodeBundle(text);
+      final selected = await pickImportedCourse(
+        context,
+        bundle,
+        sourceName: 'pasted JSON',
+      );
+      if (selected == null) return;
+      await _applyImported(selected.course, sourceName: 'pasted JSON');
     } on CourseFileException catch (e) {
       _snack('Invalid course file: $e');
     }
@@ -678,15 +690,18 @@ class _LibrarySheet extends StatelessWidget {
       );
 
   Widget _row(BuildContext context, CourseEntry e) {
+    final parts = <String>[
+      if (e.groupName != null && e.groupName!.isNotEmpty) e.groupName!,
+      if (e.details != null && e.details!.isNotEmpty) e.details!,
+      '${e.buoyCount} mark${e.buoyCount == 1 ? '' : 's'}',
+      if (e.isBundled) 'bundled',
+    ];
     return ListTile(
       leading: CircleAvatar(
         child: Icon(e.isBundled ? Icons.inventory_2_outlined : Icons.bookmark),
       ),
       title: Text(e.name),
-      subtitle: Text(
-        '${e.buoyCount} mark${e.buoyCount == 1 ? '' : 's'}'
-        '${e.isBundled ? ' · bundled' : ''}',
-      ),
+      subtitle: Text(parts.join(' · ')),
       onTap: () => Navigator.pop(
         context,
         _LibraryAction(_LibraryActionKind.load, e),

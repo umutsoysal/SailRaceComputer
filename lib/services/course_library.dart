@@ -13,6 +13,8 @@ class CourseEntry {
     required this.id,
     required this.source,
     required this.course,
+    this.groupName,
+    this.details,
   });
 
   /// Stable identifier:
@@ -21,6 +23,8 @@ class CourseEntry {
   final String id;
   final CourseSource source;
   final Course course;
+  final String? groupName;
+  final String? details;
 
   String get name => course.name;
   int get buoyCount => course.buoys.length;
@@ -49,11 +53,16 @@ class CourseLibrary {
       for (final k in keys) {
         try {
           final raw = await rootBundle.loadString(k);
-          entries.add(CourseEntry(
-            id: 'asset:$k',
-            source: CourseSource.bundled,
-            course: CourseFile.decode(raw),
-          ));
+          final bundle = CourseFile.decodeBundle(raw);
+          for (final imported in bundle.courses) {
+            entries.add(CourseEntry(
+              id: 'asset:$k#${imported.id}',
+              source: CourseSource.bundled,
+              course: imported.course,
+              groupName: bundle.courses.length > 1 ? bundle.name : null,
+              details: imported.summary,
+            ));
+          }
         } catch (_) {
           // Skip malformed asset; don't break the library.
         }
