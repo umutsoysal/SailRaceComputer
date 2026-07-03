@@ -79,6 +79,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - app_version.json
     - assets/courses/
 
   # To add assets to your application, add an assets section, like this:

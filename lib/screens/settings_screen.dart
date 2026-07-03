@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'legal_document_screen.dart';
@@ -43,6 +45,8 @@ class SettingsScreen extends StatelessWidget {
             message:
                 'Privacy, terms, feedback, and future app preferences will live here.',
           ),
+          const SizedBox(height: 16),
+          const _AppVersionCard(),
           const SizedBox(height: 16),
           const _SettingsSection(
             title: 'General',
@@ -211,6 +215,62 @@ class SettingsScreen extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _AppVersionCard extends StatelessWidget {
+  const _AppVersionCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<_AppVersionInfo>(
+      future: _AppVersionInfo.load(),
+      builder: (context, snapshot) {
+        final version = snapshot.data;
+        final subtitle = version == null
+            ? 'Could not read bundled version metadata for this build.'
+            : 'Version ${version.marketing}';
+        return Card(
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor:
+                  Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: const Icon(Icons.info_outline),
+            ),
+            title: const Text('App Version'),
+            subtitle: Text(subtitle),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AppVersionInfo {
+  const _AppVersionInfo({
+    required this.marketing,
+  });
+
+  final String marketing;
+
+  static Future<_AppVersionInfo> load() async {
+    final raw = await rootBundle.loadString('app_version.json');
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('app_version.json must contain a JSON object.');
+    }
+    final marketing = decoded['marketing'];
+    final androidBuild = decoded['android_build'];
+    final iosBuild = decoded['ios_build'];
+    if (marketing is! String ||
+        androidBuild is! int ||
+        iosBuild is! int ||
+        !RegExp(r'^\d+\.\d+\.\d+$').hasMatch(marketing)) {
+      throw const FormatException('app_version.json has invalid version data.');
+    }
+    return _AppVersionInfo(
+      marketing: marketing,
     );
   }
 }

@@ -77,6 +77,8 @@ void main() {
 
     expect(find.text('General App Settings'), findsOneWidget);
     expect(find.text('Feedback'), findsOneWidget);
+    expect(find.text('App Version'), findsOneWidget);
+    expect(find.text('Version 1.0.1'), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.text('Privacy'),
