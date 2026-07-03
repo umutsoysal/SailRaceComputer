@@ -10,10 +10,7 @@ import '../services/course_library.dart';
 import '../services/race_session_store.dart';
 
 class LibraryScreen extends StatefulWidget {
-  const LibraryScreen({
-    super.key,
-    required this.onCourseLoaded,
-  });
+  const LibraryScreen({super.key, required this.onCourseLoaded});
 
   final ValueChanged<Course> onCourseLoaded;
 
@@ -48,8 +45,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _loadCourse(CourseEntry entry) async {
@@ -148,53 +146,51 @@ class _LibraryScreenState extends State<LibraryScreen> {
         bundled.isNotEmpty || saved.isNotEmpty || _raceEntries.isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Library'),
-      ),
+      appBar: AppBar(title: const Text('Library')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : !hasAnyEntries
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text(
-                      'No saved items yet. Save a course or finish a race to add it to the library.',
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _reload,
-                  child: ListView(
-                    padding: const EdgeInsets.only(top: 8, bottom: 24),
-                    children: [
-                      if (_raceEntries.isNotEmpty) ...[
-                        _sectionHeader(context, 'Races'),
-                        ..._raceEntries.map(_buildRaceRow),
-                      ],
-                      if (saved.isNotEmpty) ...[
-                        _sectionHeader(context, 'Saved Courses'),
-                        ...saved.map(_buildCourseRow),
-                      ],
-                      if (bundled.isNotEmpty) ...[
-                        _sectionHeader(context, 'Bundled Courses'),
-                        ...bundled.map(_buildCourseRow),
-                      ],
-                    ],
-                  ),
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'No saved items yet. Save a course or finish a race to add it to the library.',
+                  textAlign: TextAlign.center,
                 ),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _reload,
+              child: ListView(
+                padding: const EdgeInsets.only(top: 8, bottom: 24),
+                children: [
+                  if (_raceEntries.isNotEmpty) ...[
+                    _sectionHeader(context, 'Races'),
+                    ..._raceEntries.map(_buildRaceRow),
+                  ],
+                  if (saved.isNotEmpty) ...[
+                    _sectionHeader(context, 'Saved Courses'),
+                    ...saved.map(_buildCourseRow),
+                  ],
+                  if (bundled.isNotEmpty) ...[
+                    _sectionHeader(context, 'Bundled Courses'),
+                    ...bundled.map(_buildCourseRow),
+                  ],
+                ],
+              ),
+            ),
     );
   }
 
   Widget _sectionHeader(BuildContext context, String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-        child: Text(
-          title,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+    child: Text(
+      title,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    ),
+  );
 
   Widget _buildCourseRow(CourseEntry entry) {
     final parts = <String>[
@@ -238,9 +234,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Widget _buildRaceRow(RaceSessionEntry entry) {
     return ListTile(
-      leading: const CircleAvatar(
-        child: Icon(Icons.route_outlined),
-      ),
+      leading: const CircleAvatar(child: Icon(Icons.route_outlined)),
       title: Text(entry.title),
       subtitle: Text('${entry.fileName} · ${entry.subtitle}'),
       trailing: Wrap(

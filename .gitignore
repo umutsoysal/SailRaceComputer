@@ -32,6 +32,12 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+/android/local.properties
+/android/key.properties
+/android/*.jks
+/android/*.keystore
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/ephemeral/
 
 # Symbolication related
 app.*.symbols
@@ -43,8 +49,3 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-/android
-/android
-/ios
-/ios
-/ios

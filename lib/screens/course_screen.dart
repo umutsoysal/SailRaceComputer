@@ -76,10 +76,13 @@ class _CourseScreenState extends State<CourseScreen> {
         content: TextField(controller: controller, autofocus: true),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: const Text('Save')),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Save'),
+          ),
         ],
       ),
     );
@@ -155,8 +158,11 @@ class _CourseScreenState extends State<CourseScreen> {
       final bytes = await file.readAsBytes();
       final json = utf8.decode(bytes);
       final bundle = CourseFile.decodeBundle(json);
-      final selected =
-          await pickImportedCourse(context, bundle, sourceName: file.name);
+      final selected = await pickImportedCourse(
+        context,
+        bundle,
+        sourceName: file.name,
+      );
       if (selected == null) return;
       await _applyImported(selected.course, sourceName: file.name);
     } on CourseFileException catch (e) {
@@ -188,7 +194,9 @@ class _CourseScreenState extends State<CourseScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
             child: const Text('Import'),
@@ -306,11 +314,7 @@ class _CourseScreenState extends State<CourseScreen> {
     final filename = CourseFile.suggestedFileName(e.course);
     try {
       await SharePlus.instance.share(
-        ShareParams(
-          text: json,
-          subject: e.name,
-          fileNameOverrides: [filename],
-        ),
+        ShareParams(text: json, subject: e.name, fileNameOverrides: [filename]),
       );
     } catch (err) {
       if (!mounted) return;
@@ -583,11 +587,14 @@ class _BuoyDialogState extends State<_BuoyDialog> {
     super.initState();
     _name = TextEditingController(text: widget.buoy?.name ?? '');
     _lat = TextEditingController(
-        text: widget.buoy?.position.lat.toStringAsFixed(6) ?? '');
+      text: widget.buoy?.position.lat.toStringAsFixed(6) ?? '',
+    );
     _lng = TextEditingController(
-        text: widget.buoy?.position.lng.toStringAsFixed(6) ?? '');
+      text: widget.buoy?.position.lng.toStringAsFixed(6) ?? '',
+    );
     _radius = TextEditingController(
-        text: (widget.buoy?.roundingRadiusM ?? 25.0).toStringAsFixed(0));
+      text: (widget.buoy?.roundingRadiusM ?? 25.0).toStringAsFixed(0),
+    );
   }
 
   @override
@@ -631,22 +638,28 @@ class _BuoyDialogState extends State<_BuoyDialog> {
                 controller: _lat,
                 decoration: const InputDecoration(labelText: 'Latitude'),
                 keyboardType: const TextInputType.numberWithOptions(
-                    signed: true, decimal: true),
+                  signed: true,
+                  decimal: true,
+                ),
                 validator: _validateLat,
               ),
               TextFormField(
                 controller: _lng,
                 decoration: const InputDecoration(labelText: 'Longitude'),
                 keyboardType: const TextInputType.numberWithOptions(
-                    signed: true, decimal: true),
+                  signed: true,
+                  decimal: true,
+                ),
                 validator: _validateLng,
               ),
               TextFormField(
                 controller: _radius,
-                decoration:
-                    const InputDecoration(labelText: 'Rounding radius (m)'),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Rounding radius (m)',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 validator: (s) {
                   final v = double.tryParse(s ?? '');
                   if (v == null || v <= 0) return 'Must be > 0';
@@ -659,8 +672,9 @@ class _BuoyDialogState extends State<_BuoyDialog> {
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel')),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           onPressed: () {
             if (!_formKey.currentState!.validate()) return;
@@ -694,11 +708,7 @@ enum _LibraryActionKind {
 }
 
 class _LibraryAction {
-  _LibraryAction(
-    this.kind, {
-    this.courseEntry,
-    this.raceEntry,
-  });
+  _LibraryAction(this.kind, {this.courseEntry, this.raceEntry});
 
   final _LibraryActionKind kind;
   final CourseEntry? courseEntry;
@@ -708,10 +718,7 @@ class _LibraryAction {
 enum _ImportChoice { replace, addNew }
 
 class _LibrarySheet extends StatelessWidget {
-  const _LibrarySheet({
-    required this.entries,
-    required this.raceEntries,
-  });
+  const _LibrarySheet({required this.entries, required this.raceEntries});
 
   final List<CourseEntry> entries;
   final List<RaceSessionEntry> raceEntries;
@@ -788,12 +795,14 @@ class _LibrarySheet extends StatelessWidget {
   }
 
   Widget _sectionHeader(BuildContext context, String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-        child: Text(title,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                )),
-      );
+    padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+    child: Text(
+      title,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    ),
+  );
 
   Widget _courseRow(BuildContext context, CourseEntry e) {
     final parts = <String>[
@@ -846,9 +855,7 @@ class _LibrarySheet extends StatelessWidget {
 
   Widget _raceRow(BuildContext context, RaceSessionEntry entry) {
     return ListTile(
-      leading: const CircleAvatar(
-        child: Icon(Icons.route_outlined),
-      ),
+      leading: const CircleAvatar(child: Icon(Icons.route_outlined)),
       title: Text(entry.title),
       subtitle: Text('${entry.fileName} · ${entry.subtitle}'),
       onTap: () => Navigator.pop(

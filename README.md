@@ -59,19 +59,19 @@ A GPS-powered sailing race companion app for iOS, Android, and Web. Race Mate tr
 ### Install dependencies
 
 ```bash
-flutter pub get
+make bootstrap
 ```
 
 ### Run on a device or simulator
 
 ```bash
 # Default (production entry point — real GPS)
-flutter run
+./tool/flutterw.sh run
 
 # Target a specific device
-flutter run -d iphone   # iOS Simulator
-flutter run -d android  # Android emulator / device
-flutter run -d chrome   # Web
+./tool/flutterw.sh run -d iphone   # iOS Simulator
+./tool/flutterw.sh run -d android  # Android emulator / device
+./tool/flutterw.sh run -d chrome   # Web
 ```
 
 ### Run the boat simulator (no GPS required)
@@ -79,7 +79,7 @@ flutter run -d chrome   # Web
 For development and testing without a physical device or GPS signal, use the built-in boat simulator:
 
 ```bash
-flutter run -t lib/dev/sim_main.dart -d chrome
+./tool/flutterw.sh run -t lib/dev/sim_main.dart -d chrome
 ```
 
 The simulator opens a top-down course map with controls for heading, speed, and position. It feeds simulated positions into the same `PositionSource` abstraction used by the production app.
@@ -87,14 +87,21 @@ The simulator opens a top-down course map with controls for heading, speed, and 
 ### Run tests
 
 ```bash
-flutter test
+make ci
 ```
 
 ### Generate app icons
 
 ```bash
 python tool/make_icon.py          # Render 1024×1024 source PNGs
-flutter pub run flutter_launcher_icons  # Slice into platform assets
+./tool/flutterw.sh pub run flutter_launcher_icons  # Slice into platform assets
+```
+
+### Build release artifacts
+
+```bash
+make build-all
+make build-ios-no-codesign   # macOS only
 ```
 
 ---
@@ -259,14 +266,15 @@ VMG is positive when the boat is closing on the mark and negative when opening.
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for workflow and quality expectations.
 
 ### Repository quality features
-- GitHub Actions CI for formatting, analysis, tests, and coverage artifacts
+- GitHub Actions CI for formatting, analysis, tests, coverage, and release-build verification
 - GitHub Pages web deployment workflow
+- Tagged release workflow that publishes Android, iOS, and Web artifacts to GitHub Releases
 - Dependabot for pub, Gradle, Bundler, and GitHub Actions updates
 - Issue templates for bug reports and feature requests
 - Pull request template with validation checklist
 - CODEOWNERS, Security Policy, and Code of Conduct
 
-CI/CD setup details are documented in [docs/ci-cd.md](docs/ci-cd.md).
+CI/CD setup details are documented in [docs/ci-cd.md](docs/ci-cd.md), and packaging details are in [docs/release.md](docs/release.md).
 
 ---
 

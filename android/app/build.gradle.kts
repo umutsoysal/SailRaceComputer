@@ -5,6 +5,16 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val keystoreProperties = java.util.Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use(keystoreProperties::load)
+}
+
+fun secret(propertyName: String, envName: String): String? =
+    keystoreProperties.getProperty(propertyName)?.takeIf { it.isNotBlank() }
+        ?: System.getenv(envName)?.takeIf { it.isNotBlank() }
+
 android {
     namespace = "com.sailrace.sail_race_computer"
     compileSdk = flutter.compileSdkVersion
@@ -20,21 +30,48 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.sailrace.sail_race_computer"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFileValue = secret("storeFile", "ANDROID_KEYSTORE_PATH")
+            val storePasswordValue =
+                secret("storePassword", "ANDROID_KEYSTORE_PASSWORD")
+            val keyAliasValue = secret("keyAlias", "ANDROID_KEY_ALIAS")
+            val keyPasswordValue = secret("keyPassword", "ANDROID_KEY_PASSWORD")
+
+            if (
+                !storeFileValue.isNullOrBlank() &&
+                !storePasswordValue.isNullOrBlank() &&
+                !keyAliasValue.isNullOrBlank() &&
+                !keyPasswordValue.isNullOrBlank()
+            ) {
+                storeFile = file(storeFileValue)
+                storePassword = storePasswordValue
+                keyAlias = keyAliasValue
+                keyPassword = keyPasswordValue
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            val hasReleaseSigning =
+                !secret("storeFile", "ANDROID_KEYSTORE_PATH").isNullOrBlank() &&
+                !secret("storePassword", "ANDROID_KEYSTORE_PASSWORD").isNullOrBlank() &&
+                !secret("keyAlias", "ANDROID_KEY_ALIAS").isNullOrBlank() &&
+                !secret("keyPassword", "ANDROID_KEY_PASSWORD").isNullOrBlank()
+            signingConfig =
+                if (hasReleaseSigning) {
+                    signingConfigs.getByName("release")
+                } else {
+                    signingConfigs.getByName("debug")
+                }
         }
     }
 }

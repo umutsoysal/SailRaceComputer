@@ -7,12 +7,15 @@ This repository uses GitHub Actions for continuous integration and delivery.
 ## 1) CI
 
 - File: `.github/workflows/ci.yml`
-- Triggers: push to `main`, pull requests
+- Triggers: push to `main`, pull requests, manual dispatch
 - Checks:
   - `flutter pub get`
   - `dart format --set-exit-if-changed`
   - `flutter analyze`
   - `flutter test --coverage`
+  - `flutter build web --release`
+  - `flutter build apk --release`
+  - `flutter build appbundle --release`
 - Artifact:
   - `coverage/lcov.info` uploaded as `coverage-lcov`
 
@@ -24,6 +27,19 @@ This repository uses GitHub Actions for continuous integration and delivery.
   - `flutter build web --release --base-href "/<repo-name>/"`
 - Deploy target:
   - GitHub Pages via `actions/deploy-pages`
+
+## 3) Release Packaging
+
+- File: `.github/workflows/release.yml`
+- Triggers: git tags beginning with `v`
+- Outputs:
+  - Android APK
+  - Android App Bundle
+  - Web tarball
+  - Unsigned iOS app bundle zip
+  - `SHA256SUMS.txt`
+- Publish target:
+  - GitHub Releases with generated release notes
 
 ## Required repository settings
 
@@ -48,6 +64,12 @@ Dependabot configuration is in `.github/dependabot.yml` and updates:
 - Android Gradle dependencies
 - iOS bundler dependencies
 
+## Local parity
+
+Use `make ci` for the same core validation loop developers see in GitHub Actions.
+
+Packaging commands are documented in [docs/release.md](release.md).
+
 ## Troubleshooting
 
 - CI fails on formatting:
@@ -56,3 +78,5 @@ Dependabot configuration is in `.github/dependabot.yml` and updates:
   - Run `flutter analyze` locally and resolve warnings/errors.
 - Web deploy path issues:
   - Verify repository name and check the base href in the deploy workflow.
+- Release workflow fails version verification:
+  - Ensure the pushed tag matches the `version:` entry in `pubspec.yaml`.

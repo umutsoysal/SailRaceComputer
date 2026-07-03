@@ -12,8 +12,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('bottom navigation library tab shows saved race GPX entries',
-      (tester) async {
+  testWidgets('bottom navigation library tab shows saved race GPX entries', (
+    tester,
+  ) async {
     final raceStore = RaceSessionStore();
     await raceStore.saveCompleted(
       RaceSessionRecord(
@@ -28,22 +29,22 @@ void main() {
     );
     expect(await raceStore.listSaved(), hasLength(1));
 
-    final course = Course(name: 'Harbor Start', buoys: [
-      Buoy(
-        name: 'Start',
-        position: const LatLng(41.88, -87.62),
-      ),
-    ]);
+    final course = Course(
+      name: 'Harbor Start',
+      buoys: [Buoy(name: 'Start', position: const LatLng(41.88, -87.62))],
+    );
 
     await tester.pumpWidget(
       MaterialApp(
-        home: AppShell(
-          course: course,
-          onCourseChanged: (_) {},
-        ),
+        home: AppShell(course: course, onCourseChanged: (_) {}),
       ),
     );
     await tester.pumpAndSettle();
+
+    expect(find.text('Course'), findsOneWidget);
+    expect(find.text('Race'), findsOneWidget);
+    expect(find.text('Map'), findsOneWidget);
+    expect(find.text('Library'), findsOneWidget);
 
     await tester.tap(find.text('Library'));
     await tester.pumpAndSettle();

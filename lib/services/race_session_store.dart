@@ -47,14 +47,14 @@ class RaceTrackPoint {
   final double altitudeM;
 
   Map<String, dynamic> toJson() => {
-        'recordedAt': recordedAt.toUtc().toIso8601String(),
-        'latitude': latitude,
-        'longitude': longitude,
-        'accuracyM': accuracyM,
-        'speedMs': speedMs,
-        'headingDeg': headingDeg,
-        'altitudeM': altitudeM,
-      };
+    'recordedAt': recordedAt.toUtc().toIso8601String(),
+    'latitude': latitude,
+    'longitude': longitude,
+    'accuracyM': accuracyM,
+    'speedMs': speedMs,
+    'headingDeg': headingDeg,
+    'altitudeM': altitudeM,
+  };
 }
 
 class RaceSessionRecord {
@@ -78,8 +78,11 @@ class RaceSessionRecord {
       finalMarkIndex: json['finalMarkIndex'] as int,
       completedCourse: json['completedCourse'] as bool? ?? false,
       track: rawTrack
-          .map((point) =>
-              RaceTrackPoint.fromJson(Map<String, dynamic>.from(point as Map)))
+          .map(
+            (point) => RaceTrackPoint.fromJson(
+              Map<String, dynamic>.from(point as Map),
+            ),
+          )
           .toList(),
     );
   }
@@ -96,14 +99,14 @@ class RaceSessionRecord {
   int get pointCount => track.length;
 
   Map<String, dynamic> toJson() => {
-        'courseName': courseName,
-        'startedAt': startedAt.toUtc().toIso8601String(),
-        'finishedAt': finishedAt.toUtc().toIso8601String(),
-        'totalMarks': totalMarks,
-        'finalMarkIndex': finalMarkIndex,
-        'completedCourse': completedCourse,
-        'track': track.map((point) => point.toJson()).toList(),
-      };
+    'courseName': courseName,
+    'startedAt': startedAt.toUtc().toIso8601String(),
+    'finishedAt': finishedAt.toUtc().toIso8601String(),
+    'totalMarks': totalMarks,
+    'finalMarkIndex': finalMarkIndex,
+    'completedCourse': completedCourse,
+    'track': track.map((point) => point.toJson()).toList(),
+  };
 
   String toGpx({String creator = 'Race Mate'}) {
     final buffer = StringBuffer()
@@ -169,7 +172,8 @@ class RaceSessionEntry {
 
   String get subtitle {
     final started = record.startedAt.toLocal();
-    final date = _two(started.month) +
+    final date =
+        _two(started.month) +
         '/' +
         _two(started.day) +
         '/' +
@@ -184,11 +188,11 @@ class RaceSessionEntry {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'fileName': fileName,
-        'record': record.toJson(),
-        'gpx': gpx,
-      };
+    'id': id,
+    'fileName': fileName,
+    'record': record.toJson(),
+    'gpx': gpx,
+  };
 }
 
 class RaceSessionStore {
@@ -222,12 +226,13 @@ class RaceSessionStore {
     try {
       final list = jsonDecode(raw) as List<dynamic>;
       final entries = list
-          .map((item) =>
-              RaceSessionEntry.fromJson(Map<String, dynamic>.from(item as Map)))
+          .map(
+            (item) => RaceSessionEntry.fromJson(
+              Map<String, dynamic>.from(item as Map),
+            ),
+          )
           .toList();
-      entries.sort(
-        (a, b) => b.record.startedAt.compareTo(a.record.startedAt),
-      );
+      entries.sort((a, b) => b.record.startedAt.compareTo(a.record.startedAt));
       return entries;
     } catch (_) {
       return const [];
@@ -299,7 +304,8 @@ class RaceSessionStore {
 
   String _suggestedFileName(RaceSessionRecord record) {
     final started = record.startedAt.toUtc();
-    final datePart = started.year.toString() +
+    final datePart =
+        started.year.toString() +
         _two(started.month) +
         _two(started.day) +
         '-' +
