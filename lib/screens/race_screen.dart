@@ -196,14 +196,18 @@ class _RaceScreenState extends State<RaceScreen> {
       final err = await _source.ensureReady();
       if (!mounted) return;
       if (err != null) {
-        setState(() {
-          _error = err;
-          _raceState = _RaceState.stopped;
-          _raceStartedAt = null;
-          _raceClockElapsed = Duration.zero;
-        });
-        _stopRaceClock();
-        _reportRecordingChanged();
+        if (err == 'Location services are disabled.') {
+          _showLocationDisabledDialog();
+        } else {
+          setState(() {
+            _error = err;
+            _raceState = _RaceState.stopped;
+            _raceStartedAt = null;
+            _raceClockElapsed = Duration.zero;
+          });
+          _stopRaceClock();
+          _reportRecordingChanged();
+        }
         return;
       }
       setState(() => _raceState = _RaceState.running);
@@ -249,6 +253,32 @@ class _RaceScreenState extends State<RaceScreen> {
       _raceState = _RaceState.running;
     });
     _reportRecordingChanged();
+  }
+
+  void _showLocationDisabledDialog() {
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Location Service Disabled'),
+        content: const Text(
+          'You must open Settings and enable Location Services to record the race.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              unawaited(Geolocator.openLocationSettings());
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _confirmAndFinishRace() async {
@@ -502,37 +532,69 @@ class _RaceScreenState extends State<RaceScreen> {
         ],
       ),
       body: SafeArea(
-        child: OrientationBuilder(
-          builder: (context, orientation) {
-            if (_raceState == _RaceState.stopped ||
-                _raceState == _RaceState.finished) {
-              return _buildLauncherBody(mark: mark, fix: fix);
-            }
-            if (orientation == Orientation.landscape) {
-              return _buildLandscapeBody(
-                mark: mark,
-                fix: fix,
-                buoys: buoys,
-                distance: distance,
-                bearing: bearing,
-                sog: sog,
-                cog: cog,
-                vmg: vmg,
-                etaSeconds: etaSeconds,
-              );
-            }
-            return _buildPortraitBody(
-              mark: mark,
-              fix: fix,
-              buoys: buoys,
-              distance: distance,
-              bearing: bearing,
-              sog: sog,
-              cog: cog,
-              vmg: vmg,
-              etaSeconds: etaSeconds,
-            );
-          },
+        child: Column(
+          children: [
+            if ((_raceState == _RaceState.running ||
+                    _raceState == _RaceState.paused) &&
+                fix == null)
+              ColoredBox(
+                color: Colors.orange.shade700,
+                child: const SizedBox(
+                  width: double.infinity,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.gps_off, color: Colors.white, size: 16),
+                        SizedBox(width: 8),
+                        Text(
+                          'No GPS Signal',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            Expanded(
+              child: OrientationBuilder(
+                builder: (context, orientation) {
+                  if (_raceState == _RaceState.stopped ||
+                      _raceState == _RaceState.finished) {
+                    return _buildLauncherBody(mark: mark, fix: fix);
+                  }
+                  if (orientation == Orientation.landscape) {
+                    return _buildLandscapeBody(
+                      mark: mark,
+                      fix: fix,
+                      buoys: buoys,
+                      distance: distance,
+                      bearing: bearing,
+                      sog: sog,
+                      cog: cog,
+                      vmg: vmg,
+                      etaSeconds: etaSeconds,
+                    );
+                  }
+                  return _buildPortraitBody(
+                    mark: mark,
+                    fix: fix,
+                    buoys: buoys,
+                    distance: distance,
+                    bearing: bearing,
+                    sog: sog,
+                    cog: cog,
+                    vmg: vmg,
+                    etaSeconds: etaSeconds,
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1169,20 +1231,6 @@ class _RaceScreenState extends State<RaceScreen> {
               const SizedBox(width: 12),
               Expanded(child: Text(msg)),
               TextButton(onPressed: _startRace, child: const Text('Retry')),
-            ],
-          ),
-        ),
-      );
-
-  Widget _statusCard({required String title, required String message}) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Text(message, textAlign: TextAlign.center),
             ],
           ),
         ),
