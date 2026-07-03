@@ -45,6 +45,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Course'), findsOneWidget);
+    expect(find.text('Race'), findsOneWidget);
+    expect(find.text('Map'), findsOneWidget);
+    expect(find.text('Library'), findsOneWidget);
+
     await tester.tap(find.text('Library'));
     await tester.pumpAndSettle();
 

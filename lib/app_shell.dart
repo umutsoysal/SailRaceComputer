@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'models/course.dart';
 import 'screens/course_screen.dart';
 import 'screens/library_screen.dart';
+import 'screens/map_screen.dart';
 import 'screens/race_screen.dart';
 import 'services/position_source.dart';
 
@@ -45,6 +46,10 @@ class _AppShellState extends State<AppShell> {
             course: widget.course,
             positionSource: widget.positionSource,
           ),
+          MapScreen(
+            course: widget.course,
+            positionSource: widget.positionSource,
+          ),
           LibraryScreen(
             key: ValueKey('library-$_libraryVersion'),
             onCourseLoaded: (course) {
@@ -58,7 +63,7 @@ class _AppShellState extends State<AppShell> {
         selectedIndex: _tab,
         onDestinationSelected: (i) {
           setState(() {
-            if (i == 2 && _tab != 2) {
+            if (i == 3 && _tab != 3) {
               _libraryVersion++;
             }
             _tab = i;
@@ -74,6 +79,11 @@ class _AppShellState extends State<AppShell> {
             icon: Icon(Icons.speed_outlined),
             selectedIcon: Icon(Icons.speed),
             label: 'Race',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.map_outlined),
+            selectedIcon: Icon(Icons.map),
+            label: 'Map',
           ),
           NavigationDestination(
             icon: Icon(Icons.library_books_outlined),
