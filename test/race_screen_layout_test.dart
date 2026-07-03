@@ -20,6 +20,12 @@ class _FakePositionSource implements PositionSource {
   Stream<Position> get stream => _controller.stream;
 
   @override
+  Future<Position?> getInitialPosition() async => _fix;
+
+  @override
+  Future<Position?> getRecoveryPosition() async => _fix;
+
+  @override
   Future<String?> ensureReady() async {
     Future<void>.delayed(Duration.zero, () {
       if (!_controller.isClosed) {
@@ -39,18 +45,19 @@ Position _makePosition({
   double speed = 2.6,
   double heading = 45.0,
   double accuracy = 5.0,
-}) => Position(
-  latitude: lat,
-  longitude: lng,
-  timestamp: DateTime(2024, 6, 1),
-  accuracy: accuracy,
-  altitude: 0,
-  altitudeAccuracy: 0,
-  heading: heading,
-  headingAccuracy: 0,
-  speed: speed,
-  speedAccuracy: 0,
-);
+}) =>
+    Position(
+      latitude: lat,
+      longitude: lng,
+      timestamp: DateTime(2024, 6, 1),
+      accuracy: accuracy,
+      altitude: 0,
+      altitudeAccuracy: 0,
+      heading: heading,
+      headingAccuracy: 0,
+      speed: speed,
+      speedAccuracy: 0,
+    );
 
 Widget _buildRaceScreen({
   required Course course,
@@ -135,6 +142,42 @@ void main() {
       expect(find.text('ETA at current VMG'), findsOneWidget);
       expect(find.text('VMG to mark'), findsOneWidget);
     });
+
+    testWidgets('supports swiping between overview, VMG, and heading views', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildRaceScreen(course: course, fix: fix, screenSize: portrait),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
+      await _drainAsyncUi(tester);
+
+      expect(find.byKey(const Key('race-view-overview')), findsOneWidget);
+
+      await tester.fling(
+        find.byKey(const Key('race-view-overview')),
+        const Offset(-300, 0),
+        1200,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('race-view-vmg')), findsOneWidget);
+      expect(find.text('VMG focus'), findsOneWidget);
+      expect(find.text('VMG to mark'), findsOneWidget);
+
+      await tester.fling(
+        find.byKey(const Key('race-view-vmg')),
+        const Offset(-300, 0),
+        1200,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('race-view-heading')), findsOneWidget);
+      expect(find.text('Heading to waypoint'), findsOneWidget);
+      expect(find.text('Heading'), findsWidgets);
+      expect(find.text('Bearing to waypoint'), findsOneWidget);
+    });
   });
 
   group('RaceScreen landscape layout', () {
@@ -156,6 +199,8 @@ void main() {
         _buildRaceScreen(course: course, fix: fix, screenSize: landscape),
       );
       await tester.pumpAndSettle();
+      await tester
+          .ensureVisible(find.widgetWithText(FilledButton, 'Start race'));
       await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
       await _drainAsyncUi(tester);
 
@@ -206,11 +251,6 @@ void main() {
     testWidgets('VMG widget is horizontally centred (in the middle column)', (
       tester,
     ) async {
-      tester.view.devicePixelRatio = 1.0;
-      tester.view.physicalSize = landscape;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
       await tester.pumpWidget(
         _buildRaceScreen(course: course, fix: fix, screenSize: landscape),
       );
@@ -344,7 +384,10 @@ void main() {
           ),
         ),
       );
-      expect(find.text('Add buoys on the Course tab first.'), findsOneWidget);
+      expect(
+        find.textContaining('Add buoys to create the course on the Course tab'),
+        findsOneWidget,
+      );
     });
   });
 

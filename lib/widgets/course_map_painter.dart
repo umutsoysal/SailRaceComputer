@@ -3,6 +3,37 @@ import 'package:flutter/material.dart';
 import '../models/course.dart';
 import '../utils/geo.dart';
 
+double chooseScaleBarNm({
+  required double pixelsPerMeter,
+  required double targetWidthPx,
+}) {
+  final pixelsPerNm = pixelsPerMeter * 1852.0;
+  if (pixelsPerNm <= 0 || targetWidthPx <= 0) {
+    return 0.1;
+  }
+
+  final targetNm = targetWidthPx / pixelsPerNm;
+  final magnitude =
+      math.pow(10, (math.log(targetNm) / math.ln10).floor()).toDouble();
+  final base = magnitude > 0 ? magnitude : 0.01;
+
+  for (final factor in const [1.0, 2.0, 5.0, 10.0]) {
+    final candidate = base * factor;
+    if (candidate >= targetNm) {
+      return candidate;
+    }
+  }
+
+  return base * 10.0;
+}
+
+String formatScaleBarNm(double nm) {
+  if (nm >= 10) return '${nm.toStringAsFixed(0)} NM';
+  if (nm >= 1) return '${nm.toStringAsFixed(1)} NM';
+  if (nm >= 0.1) return '${nm.toStringAsFixed(1)} NM';
+  return '${nm.toStringAsFixed(2)} NM';
+}
+
 /// Top-down equirectangular projection of a course and optionally a boat
 /// position. Pure CustomPainter — no map tiles, works offline.
 ///
@@ -217,10 +248,12 @@ class CourseMapPainter extends CustomPainter {
   }
 
   void _drawScaleBar(Canvas canvas, Size size) {
-    final mPerPx = 1 / _proj.pixelsPerMeter;
-    final target = 100 * mPerPx;
-    final nice = _niceRound(target);
-    final widthPx = nice * _proj.pixelsPerMeter;
+    final targetWidthPx = math.min(120.0, size.width * 0.22);
+    final niceNm = chooseScaleBarNm(
+      pixelsPerMeter: _proj.pixelsPerMeter,
+      targetWidthPx: targetWidthPx,
+    );
+    final widthPx = _proj.metersToPixels(niceNm * 1852.0);
     final y = size.height - 24;
     const x = 16.0;
     final p = Paint()
@@ -229,22 +262,7 @@ class CourseMapPainter extends CustomPainter {
     canvas.drawLine(Offset(x, y), Offset(x + widthPx, y), p);
     canvas.drawLine(Offset(x, y - 4), Offset(x, y + 4), p);
     canvas.drawLine(Offset(x + widthPx, y - 4), Offset(x + widthPx, y + 4), p);
-    _label(canvas, _formatScale(nice), Offset(x + widthPx + 6, y - 8));
-  }
-
-  String _formatScale(double meters) {
-    if (meters >= 1000) return '${(meters / 1000).toStringAsFixed(1)} km';
-    return '${meters.toStringAsFixed(0)} m';
-  }
-
-  double _niceRound(double v) {
-    final exp =
-        math.pow(10, v.toString().split('.').first.length - 1).toDouble();
-    for (final mul in const [1, 2, 5, 10]) {
-      final candidate = mul * exp;
-      if (candidate >= v) return candidate.toDouble();
-    }
-    return v;
+    _label(canvas, formatScaleBarNm(niceNm), Offset(x + widthPx + 6, y - 8));
   }
 
   Path _dashed(Path src, double dash, double gap) {

@@ -20,6 +20,12 @@ class _FakePositionSource implements PositionSource {
   Stream<Position> get stream => _controller.stream;
 
   @override
+  Future<Position?> getInitialPosition() async => _fix;
+
+  @override
+  Future<Position?> getRecoveryPosition() async => _fix;
+
+  @override
   Future<String?> ensureReady() async {
     Future<void>.delayed(Duration.zero, () {
       if (!_controller.isClosed) {

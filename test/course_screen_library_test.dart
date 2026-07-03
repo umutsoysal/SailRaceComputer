@@ -62,7 +62,7 @@ void main() {
     expect(find.text('Saved Courses'), findsNothing);
     expect(find.text('Recorded Races'), findsNothing);
 
-    await tester.pageBack();
+    await tester.tap(find.byType(ModalBarrier));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Recordings'));

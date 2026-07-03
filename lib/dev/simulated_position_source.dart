@@ -17,6 +17,24 @@ class SimulatedPositionSource implements PositionSource {
   Future<String?> ensureReady() async => null;
 
   @override
+  Future<Position?> getInitialPosition() async => Position(
+    longitude: sim.position.lng,
+    latitude: sim.position.lat,
+    timestamp: DateTime.now(),
+    accuracy: 3.0,
+    altitude: 0.0,
+    altitudeAccuracy: 0.0,
+    heading: sim.headingDeg,
+    headingAccuracy: 0.0,
+    speed: sim.speedMs,
+    speedAccuracy: 0.0,
+    isMocked: true,
+  );
+
+  @override
+  Future<Position?> getRecoveryPosition() async => getInitialPosition();
+
+  @override
   Stream<Position> get stream {
     _listener ??= () {
       _ctrl.add(Position(

@@ -19,6 +19,12 @@ class _ErrorPositionSource implements PositionSource {
   Future<String?> ensureReady() async => _error;
 
   @override
+  Future<Position?> getInitialPosition() async => null;
+
+  @override
+  Future<Position?> getRecoveryPosition() async => null;
+
+  @override
   Stream<Position> get stream => _controller.stream;
 
   @override
@@ -49,5 +55,34 @@ void main() {
     expect(find.text(locationPermissionDeniedMessage), findsOneWidget);
     expect(find.text('Open Settings'), findsOneWidget);
     expect(find.text('Waiting for GPS'), findsNothing);
+  });
+
+  testWidgets('wraps the course canvas in an interactive viewer for pinch zoom', (
+    tester,
+  ) async {
+    final course = Course(
+      name: 'Wednesday Series',
+      buoys: [
+        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
+      ],
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: SizedBox(),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapScreen(
+          course: course,
+          positionSource: _ErrorPositionSource('temporary'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(InteractiveViewer), findsOneWidget);
   });
 }

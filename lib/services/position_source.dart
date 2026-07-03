@@ -21,6 +21,14 @@ abstract class PositionSource {
   /// human-readable error message on failure.
   Future<String?> ensureReady();
 
+  /// Best-effort initial position used to seed the UI while the live stream
+  /// is still warming up. Returns null when no reasonable initial fix exists.
+  Future<Position?> getInitialPosition() async => null;
+
+  /// Best-effort one-shot position sample used when the live stream has gone
+  /// quiet and the UI wants to verify whether GPS is actually unavailable.
+  Future<Position?> getRecoveryPosition() async => null;
+
   /// Continuous stream of position fixes.
   Stream<Position> get stream;
 
@@ -29,6 +37,9 @@ abstract class PositionSource {
 }
 
 class GeolocatorPositionSource implements PositionSource {
+  static const _maxSeedAge = Duration(seconds: 10);
+  static const _maxRecoveryAge = Duration(seconds: 3);
+
   StreamSubscription<Position>? _sub;
   StreamController<Position>? _ctrl;
 
@@ -47,6 +58,30 @@ class GeolocatorPositionSource implements PositionSource {
       return locationPermissionDeniedForeverMessage;
     }
     return null;
+  }
+
+  // Both methods below intentionally read only the OS-cached position and
+  // never call getCurrentPosition: a one-shot high-accuracy request issued
+  // while the live stream is warming up competes with it for the GPS radio
+  // (and on iOS its errors leak into the stream's error handler), which
+  // delays or breaks first-fix acquisition.
+  @override
+  Future<Position?> getInitialPosition() => _freshLastKnown(_maxSeedAge);
+
+  @override
+  Future<Position?> getRecoveryPosition() => _freshLastKnown(_maxRecoveryAge);
+
+  Future<Position?> _freshLastKnown(Duration maxAge) async {
+    try {
+      final lastKnown = await Geolocator.getLastKnownPosition();
+      if (lastKnown == null) return null;
+      final age = DateTime.now().toUtc().difference(
+        lastKnown.timestamp.toUtc(),
+      );
+      return age <= maxAge ? lastKnown : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   @override

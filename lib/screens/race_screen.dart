@@ -35,10 +35,12 @@ class RaceScreen extends StatefulWidget {
 class _RaceScreenState extends State<RaceScreen> {
   static const _startOffsetOptions = <int>[0, 1, 5];
   static const _gpsSignalTimeout = Duration(seconds: 8);
+  static const _raceViewLabels = <String>['Overview', 'VMG', 'Heading'];
 
   StreamSubscription<Position>? _sub;
   Timer? _raceClockTimer;
   Timer? _gpsSignalTimer;
+  late final PageController _raceViewController;
   late final PositionSource _source;
   late final bool _ownsSource;
   final _courseLibrary = CourseLibrary();
@@ -58,11 +60,15 @@ class _RaceScreenState extends State<RaceScreen> {
   List<CourseEntry> _courseEntries = const [];
   bool _loadingCourses = true;
   bool? _lastReportedRecording;
+  bool _hasReceivedGpsFix = false;
+  bool _gpsRecoveryInFlight = false;
   bool _showNoGpsSignal = false;
+  int _raceViewIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    _raceViewController = PageController();
     _selectedCourse = _copyCourse(widget.course);
     if (widget.positionSource != null) {
       _source = widget.positionSource!;
@@ -79,6 +85,7 @@ class _RaceScreenState extends State<RaceScreen> {
   void dispose() {
     _raceClockTimer?.cancel();
     _gpsSignalTimer?.cancel();
+    _raceViewController.dispose();
     if (_lastReportedRecording == true) {
       widget.onRecordingChanged?.call(false);
     }
@@ -180,6 +187,24 @@ class _RaceScreenState extends State<RaceScreen> {
     widget.onRecordingChanged?.call(isRecording);
   }
 
+  void _setRaceView(int index, {bool animate = false}) {
+    if (_raceViewIndex != index && mounted) {
+      setState(() => _raceViewIndex = index);
+    }
+    if (!_raceViewController.hasClients) return;
+    if (animate) {
+      unawaited(
+        _raceViewController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+        ),
+      );
+      return;
+    }
+    _raceViewController.jumpToPage(index);
+  }
+
   Future<void> _startRace() async {
     try {
       if (_sub != null) {
@@ -194,11 +219,14 @@ class _RaceScreenState extends State<RaceScreen> {
         _raceStartedAt = DateTime.now().toUtc();
         _raceClockElapsed = Duration.zero;
         _currentMark = 0;
+        _raceViewIndex = 0;
         _pos = null;
         _track.clear();
         _finishingRace = false;
+        _hasReceivedGpsFix = false;
         _showNoGpsSignal = false;
       });
+      _setRaceView(0);
       final err = await _source.ensureReady();
       if (!mounted) return;
       if (err != null) {
@@ -217,9 +245,13 @@ class _RaceScreenState extends State<RaceScreen> {
         _onFix,
         onError: (e) {
           if (!mounted) return;
-          setState(() => _error = e.toString());
+          setState(() {
+            _error = e.toString();
+            _showNoGpsSignal = false;
+          });
         },
       );
+      unawaited(_primeInitialGpsFix());
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -234,9 +266,24 @@ class _RaceScreenState extends State<RaceScreen> {
     }
   }
 
+  Future<void> _primeInitialGpsFix() async {
+    try {
+      final initial = await _source.getInitialPosition();
+      if (!mounted || initial == null) return;
+      if (_raceState != _RaceState.running && _raceState != _RaceState.paused) {
+        return;
+      }
+      if (_hasReceivedGpsFix) return;
+      _onFix(initial);
+    } catch (_) {
+      // Best-effort only. The live stream remains the source of truth.
+    }
+  }
+
   void _handleLocationStartupError(String error) {
     setState(() {
       _error = error;
+      _showNoGpsSignal = false;
       _raceState = _RaceState.stopped;
       _raceStartedAt = null;
       _raceClockElapsed = Duration.zero;
@@ -258,6 +305,7 @@ class _RaceScreenState extends State<RaceScreen> {
     setState(() {
       _error = null;
       _raceState = _RaceState.paused;
+      _showNoGpsSignal = false;
     });
     _reportRecordingChanged();
   }
@@ -322,7 +370,7 @@ class _RaceScreenState extends State<RaceScreen> {
     final duration = _officialRaceDuration(finishedAt);
     final pointCount = _track.length;
     final markLabel =
-        'Mark ${_currentMark + 1} of ${widget.course.buoys.length}';
+        'Mark ${_currentMark + 1} of ${_selectedCourse.buoys.length}';
     final durationLabel = duration.inMinutes > 0
         ? '${duration.inMinutes}m ${duration.inSeconds % 60}s'
         : '${duration.inSeconds}s';
@@ -444,6 +492,7 @@ class _RaceScreenState extends State<RaceScreen> {
     _armGpsSignalTimeout();
     setState(() {
       _pos = p;
+      _hasReceivedGpsFix = true;
       _showNoGpsSignal = false;
       _track.add(point);
       if (_autoAdvance && _currentMark < _selectedCourse.buoys.length) {
@@ -474,8 +523,32 @@ class _RaceScreenState extends State<RaceScreen> {
         return;
       }
       if (_error != null) return;
-      setState(() => _showNoGpsSignal = true);
+      unawaited(_attemptGpsRecoveryAfterTimeout());
     });
+  }
+
+  Future<void> _attemptGpsRecoveryAfterTimeout() async {
+    if (_gpsRecoveryInFlight) return;
+    _gpsRecoveryInFlight = true;
+    try {
+      final sampled = await _source.getRecoveryPosition();
+      if (!mounted) return;
+      if (_raceState != _RaceState.running && _raceState != _RaceState.paused) {
+        return;
+      }
+      if (_error != null) return;
+      if (sampled != null) {
+        _onFix(sampled);
+        return;
+      }
+      if (_hasReceivedGpsFix) {
+        setState(() => _showNoGpsSignal = true);
+      } else {
+        _armGpsSignalTimeout();
+      }
+    } finally {
+      _gpsRecoveryInFlight = false;
+    }
   }
 
   void _prev() {
@@ -483,7 +556,7 @@ class _RaceScreenState extends State<RaceScreen> {
   }
 
   void _next() {
-    if (_currentMark < widget.course.buoys.length - 1) {
+    if (_currentMark < _selectedCourse.buoys.length - 1) {
       setState(() => _currentMark++);
     }
   }
@@ -593,53 +666,17 @@ class _RaceScreenState extends State<RaceScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            if ((_raceState == _RaceState.running ||
-                    _raceState == _RaceState.paused) &&
-                _showNoGpsSignal)
-              ColoredBox(
-                color: Colors.orange.shade700,
-                child: const SizedBox(
-                  width: double.infinity,
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.gps_off, color: Colors.white, size: 16),
-                        SizedBox(width: 8),
-                        Text(
-                          'No GPS Signal',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+            if (_raceState == _RaceState.running ||
+                _raceState == _RaceState.paused)
+              _buildGpsStatusBanner(context),
             Expanded(
-              child: OrientationBuilder(
-                builder: (context, orientation) {
+              child: Builder(
+                builder: (context) {
                   if (_raceState == _RaceState.stopped ||
                       _raceState == _RaceState.finished) {
                     return _buildLauncherBody(mark: mark, fix: fix);
                   }
-                  if (orientation == Orientation.landscape) {
-                    return _buildLandscapeBody(
-                      mark: mark,
-                      fix: fix,
-                      buoys: buoys,
-                      distance: distance,
-                      bearing: bearing,
-                      sog: sog,
-                      cog: cog,
-                      vmg: vmg,
-                      etaSeconds: etaSeconds,
-                    );
-                  }
-                  return _buildPortraitBody(
+                  return _buildActiveRaceBody(
                     mark: mark,
                     fix: fix,
                     buoys: buoys,
@@ -655,6 +692,163 @@ class _RaceScreenState extends State<RaceScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildGpsStatusBanner(BuildContext context) {
+    if (_showNoGpsSignal) {
+      return ColoredBox(
+        color: Colors.orange.shade700,
+        child: const SizedBox(
+          width: double.infinity,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.gps_off, color: Colors.white, size: 16),
+                SizedBox(width: 8),
+                Text(
+                  'No GPS Signal',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_error != null || _hasReceivedGpsFix) {
+      return const SizedBox.shrink();
+    }
+
+    final colors = Theme.of(context).colorScheme;
+    return ColoredBox(
+      color: colors.surfaceContainerHighest,
+      child: SizedBox(
+        width: double.infinity,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.gps_not_fixed,
+                  color: colors.onSurfaceVariant, size: 16),
+              const SizedBox(width: 8),
+              Text(
+                'Acquiring GPS...',
+                style: TextStyle(
+                  color: colors.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveRaceBody({
+    required Buoy mark,
+    required Position? fix,
+    required List<Buoy> buoys,
+    required double? distance,
+    required double? bearing,
+    required double sog,
+    required double cog,
+    required double vmg,
+    required int? etaSeconds,
+  }) {
+    return OrientationBuilder(
+      builder: (context, orientation) {
+        final overview = orientation == Orientation.landscape
+            ? _buildLandscapeBody(
+                key: const Key('race-view-overview'),
+                mark: mark,
+                fix: fix,
+                buoys: buoys,
+                distance: distance,
+                bearing: bearing,
+                sog: sog,
+                cog: cog,
+                vmg: vmg,
+                etaSeconds: etaSeconds,
+              )
+            : _buildPortraitBody(
+                key: const Key('race-view-overview'),
+                mark: mark,
+                fix: fix,
+                buoys: buoys,
+                distance: distance,
+                bearing: bearing,
+                sog: sog,
+                cog: cog,
+                vmg: vmg,
+                etaSeconds: etaSeconds,
+              );
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: _buildRaceViewSelector(),
+            ),
+            Expanded(
+              child: PageView(
+                key: const Key('race-view-pager'),
+                controller: _raceViewController,
+                onPageChanged: (index) {
+                  if (_raceViewIndex == index) return;
+                  setState(() => _raceViewIndex = index);
+                },
+                children: [
+                  overview,
+                  _buildVmgFocusBody(
+                    mark: mark,
+                    fix: fix,
+                    buoys: buoys,
+                    vmg: vmg,
+                  ),
+                  _buildHeadingBearingBody(
+                    mark: mark,
+                    fix: fix,
+                    buoys: buoys,
+                    bearing: bearing,
+                    distance: distance,
+                    heading: cog,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildRaceViewSelector() {
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _raceViewLabels.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          return ChoiceChip(
+            label: Text(_raceViewLabels[index]),
+            selected: _raceViewIndex == index,
+            onSelected: (selected) {
+              if (!selected) return;
+              _setRaceView(index, animate: true);
+            },
+          );
+        },
       ),
     );
   }
@@ -913,6 +1107,7 @@ class _RaceScreenState extends State<RaceScreen> {
   /// Portrait layout: vertical column with VMG at top, metrics below, nav at
   /// the bottom.
   Widget _buildPortraitBody({
+    Key? key,
     required Buoy mark,
     required Position? fix,
     required List<Buoy> buoys,
@@ -923,96 +1118,99 @@ class _RaceScreenState extends State<RaceScreen> {
     required double vmg,
     required int? etaSeconds,
   }) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _markHeader(mark),
-                  const SizedBox(height: 16),
-                  if (_error != null)
-                    _errorCard(_error!)
-                  else if (fix == null)
-                    const _Waiting()
-                  else ...[
-                    _bigMetric(
-                      label: 'VMG to mark',
-                      value: msToKnots(vmg).toStringAsFixed(2),
-                      unit: 'kn',
-                      good: vmg > 0,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _metric(
-                            'Distance',
-                            distance == null
-                                ? '--'
-                                : metersToNm(distance).toStringAsFixed(2),
-                            'NM',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _metric(
-                            'Bearing',
-                            bearing == null
-                                ? '--'
-                                : '${bearing.toStringAsFixed(0)}°',
-                            bearing == null ? '' : compass(bearing),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _metric(
-                            'SOG',
-                            msToKnots(sog).toStringAsFixed(2),
-                            'kn',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _metric(
-                            'COG',
-                            '${cog.toStringAsFixed(0)}°',
-                            compass(cog),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _metric(
-                      'ETA',
-                      etaSeconds == null
-                          ? '--:--'
-                          : formatEta(Duration(seconds: etaSeconds)),
-                      '',
-                    ),
+    return KeyedSubtree(
+      key: key,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _markHeader(mark),
                     const SizedBox(height: 16),
-                    Text(
-                      'Fix: ${fix.latitude.toStringAsFixed(5)}, '
-                      '${fix.longitude.toStringAsFixed(5)}  '
-                      '±${fix.accuracy.toStringAsFixed(0)} m',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    if (_error != null)
+                      _errorCard(_error!)
+                    else if (fix == null)
+                      const _Waiting()
+                    else ...[
+                      _bigMetric(
+                        label: 'VMG to mark',
+                        value: msToKnots(vmg).toStringAsFixed(2),
+                        unit: 'kn',
+                        good: vmg > 0,
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _metric(
+                              'Distance',
+                              distance == null
+                                  ? '--'
+                                  : metersToNm(distance).toStringAsFixed(2),
+                              'NM',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _metric(
+                              'Bearing',
+                              bearing == null
+                                  ? '--'
+                                  : '${bearing.toStringAsFixed(0)}°',
+                              bearing == null ? '' : compass(bearing),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _metric(
+                              'SOG',
+                              msToKnots(sog).toStringAsFixed(2),
+                              'kn',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _metric(
+                              'COG',
+                              '${cog.toStringAsFixed(0)}°',
+                              compass(cog),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _metric(
+                        'ETA at current VMG',
+                        etaSeconds == null
+                            ? '--:--'
+                            : formatEta(Duration(seconds: etaSeconds)),
+                        '',
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Fix: ${fix.latitude.toStringAsFixed(5)}, '
+                        '${fix.longitude.toStringAsFixed(5)}  '
+                        '±${fix.accuracy.toStringAsFixed(0)} m',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          _navButtons(buoys),
-        ],
+            const SizedBox(height: 12),
+            _navButtons(buoys),
+          ],
+        ),
       ),
     );
   }
@@ -1023,6 +1221,7 @@ class _RaceScreenState extends State<RaceScreen> {
   /// Centre — VMG (the most important metric, prominently centred).
   /// Right — secondary metrics: Distance, Bearing, SOG, COG, ETA, fix info.
   Widget _buildLandscapeBody({
+    Key? key,
     required Buoy mark,
     required Position? fix,
     required List<Buoy> buoys,
@@ -1033,129 +1232,277 @@ class _RaceScreenState extends State<RaceScreen> {
     required double vmg,
     required int? etaSeconds,
   }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // ── Left: mark info + nav ──────────────────────────────────────────
-        Expanded(
-          flex: 3,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(child: _markHeader(mark)),
-                ),
-                const SizedBox(height: 12),
-                _navButtons(buoys, direction: Axis.vertical),
-              ],
-            ),
-          ),
-        ),
-
-        // ── Centre: VMG ────────────────────────────────────────────────────
-        Expanded(
-          flex: 4,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-            child: Center(
-              child: _raceState == _RaceState.stopped
-                  ? const SizedBox.shrink()
-                  : _raceState == _RaceState.finished
-                      ? const SizedBox.shrink()
-                      : _error != null
-                          ? _errorCard(_error!)
-                          : fix == null
-                              ? const _Waiting()
-                              : _bigMetric(
-                                  label: 'VMG to mark',
-                                  value: msToKnots(vmg).toStringAsFixed(2),
-                                  unit: 'kn',
-                                  good: vmg > 0,
-                                ),
-            ),
-          ),
-        ),
-
-        // ── Right: secondary metrics ───────────────────────────────────────
-        Expanded(
-          flex: 4,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(6, 12, 12, 12),
-            child: (_raceState == _RaceState.stopped ||
-                    _raceState == _RaceState.finished ||
-                    _error != null ||
-                    fix == null)
-                ? const SizedBox.shrink()
-                : SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _metric(
-                                'Distance',
-                                distance == null
-                                    ? '--'
-                                    : metersToNm(distance).toStringAsFixed(2),
-                                'NM',
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _metric(
-                                'Bearing',
-                                bearing == null
-                                    ? '--'
-                                    : '${bearing.toStringAsFixed(0)}°',
-                                bearing == null ? '' : compass(bearing),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _metric(
-                                'SOG',
-                                msToKnots(sog).toStringAsFixed(2),
-                                'kn',
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _metric(
-                                'COG',
-                                '${cog.toStringAsFixed(0)}°',
-                                compass(cog),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        _metric(
-                          'ETA',
-                          etaSeconds == null
-                              ? '--:--'
-                              : formatEta(Duration(seconds: etaSeconds)),
-                          '',
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Fix: ${fix.latitude.toStringAsFixed(5)}, '
-                          '${fix.longitude.toStringAsFixed(5)}  '
-                          '±${fix.accuracy.toStringAsFixed(0)} m',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
+    return KeyedSubtree(
+      key: key,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Left: mark info + nav ──────────────────────────────────────────
+          Expanded(
+            flex: 3,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(child: _markHeader(mark)),
                   ),
+                  const SizedBox(height: 12),
+                  _navButtons(buoys, direction: Axis.vertical),
+                ],
+              ),
+            ),
           ),
+
+          // ── Centre: VMG ────────────────────────────────────────────────────
+          Expanded(
+            flex: 4,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+              child: Center(
+                child: _raceState == _RaceState.stopped
+                    ? const SizedBox.shrink()
+                    : _raceState == _RaceState.finished
+                        ? const SizedBox.shrink()
+                        : _error != null
+                            ? _errorCard(_error!)
+                            : fix == null
+                                ? const _Waiting()
+                                : _bigMetric(
+                                    label: 'VMG to mark',
+                                    value: msToKnots(vmg).toStringAsFixed(2),
+                                    unit: 'kn',
+                                    good: vmg > 0,
+                                  ),
+              ),
+            ),
+          ),
+
+          // ── Right: secondary metrics ───────────────────────────────────────
+          Expanded(
+            flex: 4,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(6, 12, 12, 12),
+              child: (_raceState == _RaceState.stopped ||
+                      _raceState == _RaceState.finished ||
+                      _error != null ||
+                      fix == null)
+                  ? const SizedBox.shrink()
+                  : SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _metric(
+                                  'Distance',
+                                  distance == null
+                                      ? '--'
+                                      : metersToNm(distance).toStringAsFixed(2),
+                                  'NM',
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _metric(
+                                  'Bearing',
+                                  bearing == null
+                                      ? '--'
+                                      : '${bearing.toStringAsFixed(0)}°',
+                                  bearing == null ? '' : compass(bearing),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _metric(
+                                  'SOG',
+                                  msToKnots(sog).toStringAsFixed(2),
+                                  'kn',
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _metric(
+                                  'COG',
+                                  '${cog.toStringAsFixed(0)}°',
+                                  compass(cog),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          _metric(
+                            'ETA at current VMG',
+                            etaSeconds == null
+                                ? '--:--'
+                                : formatEta(Duration(seconds: etaSeconds)),
+                            '',
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Fix: ${fix.latitude.toStringAsFixed(5)}, '
+                            '${fix.longitude.toStringAsFixed(5)}  '
+                            '±${fix.accuracy.toStringAsFixed(0)} m',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVmgFocusBody({
+    required Buoy mark,
+    required Position? fix,
+    required List<Buoy> buoys,
+    required double vmg,
+  }) {
+    return KeyedSubtree(
+      key: const Key('race-view-vmg'),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _markHeader(mark),
+                    const SizedBox(height: 16),
+                    Text(
+                      'VMG focus',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'A clean, high-contrast view of velocity made good toward the active mark.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    if (_error != null)
+                      _errorCard(_error!)
+                    else if (fix == null)
+                      const _Waiting()
+                    else
+                      _bigMetric(
+                        label: 'VMG to mark',
+                        value: msToKnots(vmg).toStringAsFixed(2),
+                        unit: 'kn',
+                        good: vmg > 0,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _navButtons(buoys),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildHeadingBearingBody({
+    required Buoy mark,
+    required Position? fix,
+    required List<Buoy> buoys,
+    required double heading,
+    required double? bearing,
+    required double? distance,
+  }) {
+    return KeyedSubtree(
+      key: const Key('race-view-heading'),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _markHeader(mark),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Heading to waypoint',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    if (_error != null)
+                      _errorCard(_error!)
+                    else if (fix == null)
+                      const _Waiting()
+                    else ...[
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact = constraints.maxWidth < 640;
+                          final headingCard = _directionMetric(
+                            label: 'Heading',
+                            value: '${heading.toStringAsFixed(0)}°',
+                            direction: compass(heading),
+                          );
+                          final bearingCard = _directionMetric(
+                            label: 'Bearing to waypoint',
+                            value: bearing == null
+                                ? '--'
+                                : '${bearing.toStringAsFixed(0)}°',
+                            direction: bearing == null ? '' : compass(bearing),
+                          );
+                          if (compact) {
+                            return Column(
+                              children: [
+                                headingCard,
+                                const SizedBox(height: 12),
+                                bearingCard,
+                              ],
+                            );
+                          }
+                          return Row(
+                            children: [
+                              Expanded(child: headingCard),
+                              const SizedBox(width: 12),
+                              Expanded(child: bearingCard),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _metric(
+                        'Turn',
+                        _steeringAdjustmentLabel(heading, bearing),
+                        '',
+                      ),
+                      const SizedBox(height: 12),
+                      _metric(
+                        'Distance',
+                        distance == null
+                            ? '--'
+                            : metersToNm(distance).toStringAsFixed(2),
+                        'NM',
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _navButtons(buoys),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1188,7 +1535,7 @@ class _RaceScreenState extends State<RaceScreen> {
   }
 
   Widget _markHeader(Buoy mark) {
-    final buoys = widget.course.buoys;
+    final buoys = _selectedCourse.buoys;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1211,6 +1558,15 @@ class _RaceScreenState extends State<RaceScreen> {
         ),
       ),
     );
+  }
+
+  String _steeringAdjustmentLabel(double heading, double? bearing) {
+    if (bearing == null) return 'Waiting for bearing';
+    final delta = ((bearing - heading + 540) % 360) - 180;
+    final absDelta = delta.abs().round();
+    if (absDelta < 5) return 'On target';
+    final side = delta > 0 ? 'Starboard' : 'Port';
+    return '$side $absDelta°';
   }
 
   Widget _bigMetric({
@@ -1244,6 +1600,36 @@ class _RaceScreenState extends State<RaceScreen> {
                 Text(unit, style: TextStyle(fontSize: 22, color: color)),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _directionMetric({
+    required String label,
+    required String value,
+    required String direction,
+  }) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w700),
+            ),
+            if (direction.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                direction,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
           ],
         ),
       ),

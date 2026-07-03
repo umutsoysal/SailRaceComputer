@@ -20,6 +20,12 @@ class _ErrorPositionSource implements PositionSource {
   Future<String?> ensureReady() async => _error;
 
   @override
+  Future<Position?> getInitialPosition() async => null;
+
+  @override
+  Future<Position?> getRecoveryPosition() async => null;
+
+  @override
   Stream<Position> get stream => _controller.stream;
 
   @override
@@ -35,6 +41,12 @@ class _DelayedPositionSource implements PositionSource {
   Future<String?> ensureReady() async => null;
 
   @override
+  Future<Position?> getInitialPosition() async => null;
+
+  @override
+  Future<Position?> getRecoveryPosition() async => null;
+
+  @override
   Stream<Position> get stream => _controller.stream;
 
   void emit(Position position) {
@@ -42,6 +54,50 @@ class _DelayedPositionSource implements PositionSource {
       _controller.add(position);
     }
   }
+
+  @override
+  Future<void> dispose() => _controller.close();
+}
+
+class _InitialFixOnlyPositionSource implements PositionSource {
+  _InitialFixOnlyPositionSource(this._position);
+
+  final Position _position;
+  final _controller = StreamController<Position>.broadcast();
+
+  @override
+  Future<String?> ensureReady() async => null;
+
+  @override
+  Future<Position?> getInitialPosition() async => _position;
+
+  @override
+  Future<Position?> getRecoveryPosition() async => null;
+
+  @override
+  Stream<Position> get stream => _controller.stream;
+
+  @override
+  Future<void> dispose() => _controller.close();
+}
+
+class _RecoveryOnlyPositionSource implements PositionSource {
+  _RecoveryOnlyPositionSource(this._position);
+
+  final Position _position;
+  final _controller = StreamController<Position>.broadcast();
+
+  @override
+  Future<String?> ensureReady() async => null;
+
+  @override
+  Future<Position?> getInitialPosition() async => null;
+
+  @override
+  Future<Position?> getRecoveryPosition() async => _position;
+
+  @override
+  Stream<Position> get stream => _controller.stream;
 
   @override
   Future<void> dispose() => _controller.close();
@@ -100,7 +156,7 @@ void main() {
   });
 
   testWidgets(
-      'does not show no gps signal during initial warm-up before timeout', (
+      'shows acquiring gps during initial warm-up and does not show no gps signal before first fix', (
     tester,
   ) async {
     final source = _DelayedPositionSource();
@@ -124,6 +180,57 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
     await tester.pump();
 
+    expect(find.text('Acquiring GPS...'), findsOneWidget);
+    expect(find.text('No GPS Signal'), findsNothing);
+
+    await tester.pump(const Duration(seconds: 7));
+    expect(find.text('Acquiring GPS...'), findsOneWidget);
+    expect(find.text('No GPS Signal'), findsNothing);
+
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('Acquiring GPS...'), findsOneWidget);
+    expect(find.text('No GPS Signal'), findsNothing);
+
+    source.emit(makePosition());
+    await tester.pump();
+    await tester.idle();
+    await tester.pump();
+
+    expect(find.text('Acquiring GPS...'), findsNothing);
+    expect(find.text('No GPS Signal'), findsNothing);
+  });
+
+  testWidgets(
+      'shows no gps signal only after a real fix has been lost for the timeout window', (
+    tester,
+  ) async {
+    final source = _DelayedPositionSource();
+    final course = Course(
+      name: 'Harbor Start',
+      buoys: [
+        Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62)),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RaceScreen(
+          course: course,
+          positionSource: source,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
+    await tester.pump();
+
+    source.emit(makePosition());
+    await tester.pump();
+    await tester.idle();
+    await tester.pump();
+
+    expect(find.text('Acquiring GPS...'), findsNothing);
     expect(find.text('No GPS Signal'), findsNothing);
 
     await tester.pump(const Duration(seconds: 7));
@@ -131,12 +238,71 @@ void main() {
 
     await tester.pump(const Duration(seconds: 2));
     expect(find.text('No GPS Signal'), findsOneWidget);
+  });
 
-    source.emit(makePosition());
+  testWidgets(
+      'uses an initial gps fix before the live stream produces updates', (
+    tester,
+  ) async {
+    final course = Course(
+      name: 'Harbor Start',
+      buoys: [
+        Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62)),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RaceScreen(
+          course: course,
+          positionSource: _InitialFixOnlyPositionSource(makePosition()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
     await tester.pump();
     await tester.idle();
     await tester.pump();
 
+    expect(find.text('Acquiring GPS...'), findsNothing);
     expect(find.text('No GPS Signal'), findsNothing);
+    expect(find.textContaining('±'), findsWidgets);
+  });
+
+  testWidgets(
+      'uses a recovery gps sample before showing no gps signal when the stream goes quiet', (
+    tester,
+  ) async {
+    final course = Course(
+      name: 'Harbor Start',
+      buoys: [
+        Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62)),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RaceScreen(
+          course: course,
+          positionSource: _RecoveryOnlyPositionSource(makePosition()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
+    await tester.pump();
+
+    expect(find.text('Acquiring GPS...'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 8));
+    await tester.idle();
+    await tester.pump();
+
+    expect(find.text('Acquiring GPS...'), findsNothing);
+    expect(find.text('No GPS Signal'), findsNothing);
+    expect(find.textContaining('±'), findsWidgets);
   });
 }
