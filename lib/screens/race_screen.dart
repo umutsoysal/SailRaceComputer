@@ -16,12 +16,14 @@ class RaceScreen extends StatefulWidget {
   final Course course;
   final PositionSource? positionSource;
   final ValueChanged<Course>? onCourseChanged;
+  final ValueChanged<bool>? onRecordingChanged;
 
   const RaceScreen({
     super.key,
     required this.course,
     this.positionSource,
     this.onCourseChanged,
+    this.onRecordingChanged,
   });
 
   @override
@@ -46,6 +48,7 @@ class _RaceScreenState extends State<RaceScreen> {
   late Course _selectedCourse;
   List<CourseEntry> _courseEntries = const [];
   bool _loadingCourses = true;
+  bool? _lastReportedRecording;
 
   @override
   void initState() {
@@ -58,11 +61,15 @@ class _RaceScreenState extends State<RaceScreen> {
       _source = GeolocatorPositionSource();
       _ownsSource = true;
     }
+    _reportRecordingChanged();
     unawaited(_loadCourseEntries());
   }
 
   @override
   void dispose() {
+    if (_lastReportedRecording == true) {
+      widget.onRecordingChanged?.call(false);
+    }
     _sub?.cancel();
     if (_ownsSource) _source.dispose();
     super.dispose();
@@ -109,6 +116,13 @@ class _RaceScreenState extends State<RaceScreen> {
 
   Course _copyCourse(Course course) => Course.decode(course.encode());
 
+  void _reportRecordingChanged() {
+    final isRecording = _raceState == _RaceState.running;
+    if (_lastReportedRecording == isRecording) return;
+    _lastReportedRecording = isRecording;
+    widget.onRecordingChanged?.call(isRecording);
+  }
+
   Future<void> _startRace() async {
     try {
       if (_sub != null) {
@@ -133,9 +147,11 @@ class _RaceScreenState extends State<RaceScreen> {
           _error = err;
           _raceState = _RaceState.stopped;
         });
+        _reportRecordingChanged();
         return;
       }
       setState(() => _raceState = _RaceState.running);
+      _reportRecordingChanged();
       _sub = _source.stream.listen(
         _onFix,
         onError: (e) {
@@ -149,6 +165,7 @@ class _RaceScreenState extends State<RaceScreen> {
         _error = e.toString();
         _raceState = _RaceState.stopped;
       });
+      _reportRecordingChanged();
     }
   }
 
@@ -160,6 +177,7 @@ class _RaceScreenState extends State<RaceScreen> {
       _error = null;
       _raceState = _RaceState.paused;
     });
+    _reportRecordingChanged();
   }
 
   void _resumeRace() {
@@ -170,6 +188,7 @@ class _RaceScreenState extends State<RaceScreen> {
       _error = null;
       _raceState = _RaceState.running;
     });
+    _reportRecordingChanged();
   }
 
   Future<void> _confirmAndFinishRace() async {
@@ -183,9 +202,8 @@ class _RaceScreenState extends State<RaceScreen> {
     final durationLabel = duration.inMinutes > 0
         ? '${duration.inMinutes}m ${duration.inSeconds % 60}s'
         : '${duration.inSeconds}s';
-    final pointLabel = pointCount == 1
-        ? '1 GPS point'
-        : '$pointCount GPS points';
+    final pointLabel =
+        pointCount == 1 ? '1 GPS point' : '$pointCount GPS points';
 
     final shouldFinish = await showDialog<bool>(
       context: context,
@@ -245,6 +263,7 @@ class _RaceScreenState extends State<RaceScreen> {
         _error = null;
         _finishMessage = finishMessage;
       });
+      _reportRecordingChanged();
     }
 
     await _sub?.cancel();
@@ -261,6 +280,7 @@ class _RaceScreenState extends State<RaceScreen> {
         _raceState = _RaceState.paused;
         _error = 'Could not save race data: $e';
       });
+      _reportRecordingChanged();
       _finishingRace = false;
     }
   }
@@ -272,12 +292,10 @@ class _RaceScreenState extends State<RaceScreen> {
   }) {
     final minutes = duration.inMinutes;
     final seconds = duration.inSeconds % 60;
-    final durationText = minutes > 0
-        ? '${minutes}m ${seconds}s'
-        : '${seconds}s';
-    final summary = pointCount == 1
-        ? 'Saved 1 GPS point'
-        : 'Saved $pointCount GPS points';
+    final durationText =
+        minutes > 0 ? '${minutes}m ${seconds}s' : '${seconds}s';
+    final summary =
+        pointCount == 1 ? 'Saved 1 GPS point' : 'Saved $pointCount GPS points';
     if (completedCourse) {
       return 'Race finished. $summary over $durationText. GPX added to library.';
     }
@@ -339,9 +357,8 @@ class _RaceScreenState extends State<RaceScreen> {
     final sog = fix?.speed ?? 0.0; // m/s
     final cog = fix?.heading ?? 0.0; // degrees true
     final vmg = (bearing == null) ? 0.0 : vmgMs(sog, cog, bearing);
-    final etaSeconds = (vmg > 0.05 && distance != null)
-        ? (distance / vmg).round()
-        : null;
+    final etaSeconds =
+        (vmg > 0.05 && distance != null) ? (distance / vmg).round() : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -468,7 +485,7 @@ class _RaceScreenState extends State<RaceScreen> {
             Text(
               _raceState == _RaceState.finished
                   ? (_finishMessage ??
-                        'Your race has been saved to the library.')
+                      'Your race has been saved to the library.')
                   : 'Pick a course, check the layout, and start tracking when you are lined up.',
             ),
             const SizedBox(height: 16),
@@ -530,7 +547,8 @@ class _RaceScreenState extends State<RaceScreen> {
                       double total = 0;
                       final b = _selectedCourse.buoys;
                       for (int i = 0; i < b.length - 1; i++) {
-                        total += distanceMeters(b[i].position, b[i + 1].position);
+                        total +=
+                            distanceMeters(b[i].position, b[i + 1].position);
                       }
                       return '${metersToNm(total).toStringAsFixed(1)} NM total';
                     }(),
@@ -619,7 +637,9 @@ class _RaceScreenState extends State<RaceScreen> {
         _RaceCourseOption(
           key: key,
           course: _copyCourse(course),
-          label: sourceLabel.isEmpty ? course.name : '${course.name} · $sourceLabel',
+          label: sourceLabel.isEmpty
+              ? course.name
+              : '${course.name} · $sourceLabel',
         ),
       );
     }
@@ -804,17 +824,17 @@ class _RaceScreenState extends State<RaceScreen> {
               child: _raceState == _RaceState.stopped
                   ? const SizedBox.shrink()
                   : _raceState == _RaceState.finished
-                  ? const SizedBox.shrink()
-                  : _error != null
-                  ? _errorCard(_error!)
-                  : fix == null
-                  ? const _Waiting()
-                  : _bigMetric(
-                      label: 'VMG to mark',
-                      value: msToKnots(vmg).toStringAsFixed(2),
-                      unit: 'kn',
-                      good: vmg > 0,
-                    ),
+                      ? const SizedBox.shrink()
+                      : _error != null
+                          ? _errorCard(_error!)
+                          : fix == null
+                              ? const _Waiting()
+                              : _bigMetric(
+                                  label: 'VMG to mark',
+                                  value: msToKnots(vmg).toStringAsFixed(2),
+                                  unit: 'kn',
+                                  good: vmg > 0,
+                                ),
             ),
           ),
         ),
@@ -824,8 +844,7 @@ class _RaceScreenState extends State<RaceScreen> {
           flex: 4,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(6, 12, 12, 12),
-            child:
-                (_raceState == _RaceState.stopped ||
+            child: (_raceState == _RaceState.stopped ||
                     _raceState == _RaceState.finished ||
                     _error != null ||
                     fix == null)
@@ -1023,33 +1042,33 @@ class _RaceScreenState extends State<RaceScreen> {
   }
 
   Widget _errorCard(String msg) => Card(
-    color: Colors.red.shade50,
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: Colors.red),
-          const SizedBox(width: 12),
-          Expanded(child: Text(msg)),
-          TextButton(onPressed: _startRace, child: const Text('Retry')),
-        ],
-      ),
-    ),
-  );
+        color: Colors.red.shade50,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red),
+              const SizedBox(width: 12),
+              Expanded(child: Text(msg)),
+              TextButton(onPressed: _startRace, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
 
   Widget _statusCard({required String title, required String message}) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text(message, textAlign: TextAlign.center),
-        ],
-      ),
-    ),
-  );
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(message, textAlign: TextAlign.center),
+            ],
+          ),
+        ),
+      );
 }
 
 class _Waiting extends StatelessWidget {

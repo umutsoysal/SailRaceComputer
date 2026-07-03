@@ -31,6 +31,7 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   late int _tab = widget.initialTab;
   var _libraryVersion = 0;
+  var _raceRecording = false;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +47,10 @@ class _AppShellState extends State<AppShell> {
             course: widget.course,
             positionSource: widget.positionSource,
             onCourseChanged: widget.onCourseChanged,
+            onRecordingChanged: (isRecording) {
+              if (_raceRecording == isRecording || !mounted) return;
+              setState(() => _raceRecording = isRecording);
+            },
           ),
           MapScreen(
             course: widget.course,
@@ -70,28 +75,78 @@ class _AppShellState extends State<AppShell> {
             _tab = i;
           });
         },
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.flag_outlined),
             selectedIcon: Icon(Icons.flag),
             label: 'Course',
           ),
           NavigationDestination(
-            icon: Icon(Icons.speed_outlined),
-            selectedIcon: Icon(Icons.speed),
+            icon: _RaceTabIcon(
+              isHighlighted: _raceRecording,
+              isSelected: false,
+            ),
+            selectedIcon: _RaceTabIcon(
+              isHighlighted: _raceRecording,
+              isSelected: true,
+            ),
             label: 'Race',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.map_outlined),
             selectedIcon: Icon(Icons.map),
             label: 'Map',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.library_books_outlined),
             selectedIcon: Icon(Icons.library_books),
             label: 'Library',
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RaceTabIcon extends StatelessWidget {
+  const _RaceTabIcon({
+    required this.isHighlighted,
+    required this.isSelected,
+  });
+
+  static const _recordOrange = Color(0xFFFC4C02);
+
+  final bool isHighlighted;
+  final bool isSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isHighlighted) {
+      return Icon(isSelected ? Icons.speed : Icons.speed_outlined);
+    }
+
+    return DecoratedBox(
+      key: Key(
+        isSelected
+            ? 'race-tab-recording-selected'
+            : 'race-tab-recording-indicator',
+      ),
+      decoration: BoxDecoration(
+        color: _recordOrange,
+        shape: BoxShape.circle,
+      ),
+      child: SizedBox.square(
+        dimension: 22,
+        child: Center(
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+        ),
       ),
     );
   }
