@@ -2,7 +2,7 @@ FLUTTER ?= ./tool/flutterw.sh
 DART ?= ./tool/dartw.sh
 BASE_HREF ?= /
 
-.PHONY: help bootstrap format analyze test coverage ci build-web build-apk build-appbundle build-ios-no-codesign build-all clean version version-tag version-check version-sync version-android version-ios version-patch version-minor version-major version-release-patch version-release-minor version-release-major
+.PHONY: help bootstrap format analyze test coverage ci build-web build-apk build-appbundle build-ios-no-codesign build-all clean version version-tag version-check version-sync version-android version-ios version-patch version-minor version-major version-release-patch version-release-minor version-release-major ship ship-patch ship-minor ship-major ship-android ship-ios
 
 help:
 	@printf '%s\n' \
@@ -19,6 +19,12 @@ help:
 		'build-all              Build web + Android release artifacts' \
 		'version                Show the public release version and internal platform counters' \
 		'version-tag            Print the unique release automation tag' \
+		'ship                   Show the current release version and tag' \
+		'ship-patch             Prepare a normal patch release on both platforms' \
+		'ship-minor             Prepare a normal minor release on both platforms' \
+		'ship-major             Prepare a normal major release on both platforms' \
+		'ship-android           Prepare an Android-only catch-up release' \
+		'ship-ios               Prepare an iOS-only catch-up release' \
 		'version-check          Validate app_version.json and pubspec sync' \
 		'version-sync           Sync pubspec.yaml from app_version.json' \
 		'version-android        Increment the Android build counter' \
@@ -50,6 +56,8 @@ ci: bootstrap format analyze test build-web build-apk build-appbundle
 
 version:
 	$(DART) tool/version.dart current
+
+ship: version
 
 version-tag:
 	$(DART) tool/version.dart tag
@@ -89,6 +97,16 @@ version-android:
 
 version-ios:
 	$(DART) tool/version.dart bump ios
+
+ship-patch: version-release-patch ci
+
+ship-minor: version-release-minor ci
+
+ship-major: version-release-major ci
+
+ship-android: version-android ci
+
+ship-ios: version-ios ci
 
 build-web: bootstrap
 	$(FLUTTER) build web --release --base-href "$(BASE_HREF)" $(shell $(DART) tool/version.dart build-args web)

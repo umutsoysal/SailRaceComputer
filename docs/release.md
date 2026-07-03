@@ -40,6 +40,12 @@ That pubspec suffix is internal plumbing, not your public release version.
 Use the repo tool instead of editing `pubspec.yaml` by hand:
 
 ```bash
+make ship
+make ship-patch
+make ship-minor
+make ship-major
+make ship-android
+make ship-ios
 make version
 make version-patch
 make version-minor
@@ -54,18 +60,18 @@ make version-tag
 
 Recommended patterns:
 
-- Small shipped fix with a new public release:
-  - `make version-patch`
+- Day-to-day easiest command to inspect the current version:
+  - `make ship`
 - Small shipped fix on both platforms:
-  - `make version-release-patch`
-- Feature release:
-  - `make version-release-minor`
-- Big milestone:
-  - `make version-release-major`
+  - `make ship-patch`
+- Feature release on both platforms:
+  - `make ship-minor`
+- Big milestone on both platforms:
+  - `make ship-major`
 - Android-only catch-up build:
-  - `make version-android`
+  - `make ship-android`
 - iOS-only catch-up build:
-  - `make version-ios`
+  - `make ship-ios`
 
 `make version-tag` prints the unique automation tag expected by the release workflow.
 Example:
@@ -75,6 +81,9 @@ Example:
 
 That tag stays unique even when Android or iOS catches up later, while the app
 still shows the single public release version `1.0.0`.
+
+`make ship-*` targets already run `make ci` for you after bumping the version,
+so they are the simplest safe commands to use most of the time.
 
 ## Local build commands
 
@@ -144,8 +153,7 @@ multiple user-facing version names.
 For a release on both platforms:
 
 ```bash
-make version-release-patch
-make ci
+make ship-patch
 git commit -am "Release 1.0.1"
 git tag "$(make -s version-tag)"
 git push origin main --tags
@@ -154,8 +162,7 @@ git push origin main --tags
 For an Android-only catch-up release without changing the public release name:
 
 ```bash
-make version-android
-make ci
+make ship-android
 git commit -am "Android catch-up build for 1.0.1"
 git tag "$(make -s version-tag)"
 git push origin main --tags
