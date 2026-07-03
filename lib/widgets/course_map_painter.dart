@@ -35,7 +35,7 @@ class CourseMapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final points = [
       ...course.buoys.map((b) => b.position),
-      if (boat != null) boat!,
+      ?boat,
       ...track,
     ];
     _proj = _Projection.fit(
