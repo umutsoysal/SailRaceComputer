@@ -29,6 +29,7 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   late final PositionSource _source;
   late final bool _ownsSource;
+  final _mapTransformController = TransformationController();
   StreamSubscription<Position>? _sub;
   Position? _pos;
   String? _error;
@@ -62,6 +63,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     _sub?.cancel();
+    _mapTransformController.dispose();
     if (_ownsSource) _source.dispose();
     super.dispose();
   }
@@ -81,13 +83,25 @@ class _MapScreenState extends State<MapScreen> {
     final boat = fix != null ? LatLng(fix.latitude, fix.longitude) : null;
     return Stack(
       children: [
-        SizedBox.expand(
-          child: CustomPaint(
-            painter: CourseMapPainter(
-              course: widget.course,
-              boat: boat,
-              heading: fix?.heading ?? 0,
-              speedMs: fix?.speed ?? 0,
+        Positioned.fill(
+          child: LayoutBuilder(
+            builder: (context, constraints) => InteractiveViewer(
+              transformationController: _mapTransformController,
+              boundaryMargin: const EdgeInsets.all(120),
+              minScale: 0.75,
+              maxScale: 8,
+              child: SizedBox(
+                width: constraints.maxWidth,
+                height: constraints.maxHeight,
+                child: CustomPaint(
+                  painter: CourseMapPainter(
+                    course: widget.course,
+                    boat: boat,
+                    heading: fix?.heading ?? 0,
+                    speedMs: fix?.speed ?? 0,
+                  ),
+                ),
+              ),
             ),
           ),
         ),
