@@ -407,7 +407,7 @@ class _RaceScreenState extends State<RaceScreen> {
     if (buoys.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: const Text('Race')),
-        body: const Center(child: Text('Add buoys on the Course tab first.')),
+        body: const Center(child: Text('Add buoys to create the course on the Course tab or choose one of the existing courses.')),
       );
     }
 

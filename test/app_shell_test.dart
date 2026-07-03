@@ -64,6 +64,32 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  testWidgets('race tab is centered in the bottom navigation bar', (
+    tester,
+  ) async {
+    final course = Course(
+      name: 'Wednesday Series',
+      buoys: [
+        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
+        Buoy(name: 'Finish', position: const LatLng(41.89, -87.61)),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AppShell(course: course, onCourseChanged: (_) {}),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final mapCenter = tester.getCenter(find.text('Map'));
+    final raceCenter = tester.getCenter(find.text('Race'));
+    final libraryCenter = tester.getCenter(find.text('Library'));
+
+    expect(raceCenter.dx, greaterThan(mapCenter.dx));
+    expect(raceCenter.dx, lessThan(libraryCenter.dx));
+  });
+
   testWidgets('race tab stays highlighted while recording is active', (
     tester,
   ) async {
@@ -84,7 +110,7 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await _drainAsyncUi(tester);
 
     expect(
       find.byKey(const Key('race-tab-recording-indicator')),
@@ -92,12 +118,12 @@ void main() {
     );
 
     await tester.tap(find.text('Race'));
-    await tester.pumpAndSettle();
+    await _drainAsyncUi(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
     await _drainAsyncUi(tester);
 
     await tester.tap(find.text('Library'));
-    await tester.pumpAndSettle();
+    await _drainAsyncUi(tester);
 
     final indicatorFinder = find.byKey(
       const Key('race-tab-recording-indicator'),
@@ -110,9 +136,9 @@ void main() {
     expect(decoration.shape, BoxShape.circle);
 
     await tester.tap(find.text('Race'));
-    await tester.pumpAndSettle();
+    await _drainAsyncUi(tester);
     await tester.tap(find.byTooltip('Finish and save race'));
-    await tester.pumpAndSettle();
+    await _drainAsyncUi(tester);
     await tester.tap(find.text('Finish & save'));
     await _drainAsyncUi(tester);
 

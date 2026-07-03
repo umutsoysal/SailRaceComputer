@@ -1,6 +1,29 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'legal_document_screen.dart';
+
+Future<void> _launchFeedbackEmail(BuildContext context) async {
+  final uri = Uri(
+    scheme: 'mailto',
+    path: 'usailfasttech+feedback@gmail.com',
+    queryParameters: {
+      'subject': 'Race Mate Feedback',
+      'body': 'Hi,\n\nHere is my feedback about Race Mate:\n\n',
+    },
+  );
+  if (!await launchUrl(uri)) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open email app. Send feedback to usailfasttech+feedback@gmail.com'),
+        ),
+      );
+    }
+  }
+}
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -36,15 +59,16 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          const _SettingsSection(
+          _SettingsSection(
             title: 'Support',
             items: [
               _SettingsItem(
                 icon: Icons.feedback_outlined,
                 title: 'Feedback',
                 subtitle: 'Tell us what is working and what needs improvement.',
+                action: _launchFeedbackEmail,
               ),
-              _SettingsItem(
+              const _SettingsItem(
                 icon: Icons.help_outline,
                 title: 'Help',
                 subtitle: 'Tips and support resources for using the app.',
@@ -288,6 +312,11 @@ class _SettingsTile extends StatelessWidget {
           ).push(MaterialPageRoute(builder: destination));
           return;
         }
+        final action = item.action;
+        if (action != null) {
+          unawaited(action(context));
+          return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${item.title} is coming soon.')),
         );
@@ -302,10 +331,12 @@ class _SettingsItem {
     required this.title,
     required this.subtitle,
     this.destination,
+    this.action,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final WidgetBuilder? destination;
+  final Future<void> Function(BuildContext context)? action;
 }

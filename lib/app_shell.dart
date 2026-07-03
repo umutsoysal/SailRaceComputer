@@ -44,6 +44,10 @@ class _AppShellState extends State<AppShell> {
             course: widget.course,
             onChanged: widget.onCourseChanged,
           ),
+          MapScreen(
+            course: widget.course,
+            positionSource: widget.positionSource,
+          ),
           RaceScreen(
             course: widget.course,
             positionSource: widget.positionSource,
@@ -52,10 +56,6 @@ class _AppShellState extends State<AppShell> {
               if (_raceRecording == isRecording || !mounted) return;
               setState(() => _raceRecording = isRecording);
             },
-          ),
-          MapScreen(
-            course: widget.course,
-            positionSource: widget.positionSource,
           ),
           LibraryScreen(
             key: ValueKey('library-$_libraryVersion'),
@@ -83,6 +83,11 @@ class _AppShellState extends State<AppShell> {
             selectedIcon: Icon(Icons.flag),
             label: 'Course',
           ),
+          const NavigationDestination(
+            icon: Icon(Icons.map_outlined),
+            selectedIcon: Icon(Icons.map),
+            label: 'Map',
+          ),
           NavigationDestination(
             icon: _RaceTabIcon(
               isHighlighted: _raceRecording,
@@ -93,11 +98,6 @@ class _AppShellState extends State<AppShell> {
               isSelected: true,
             ),
             label: 'Race',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.map_outlined),
-            selectedIcon: Icon(Icons.map),
-            label: 'Map',
           ),
           const NavigationDestination(
             icon: Icon(Icons.library_books_outlined),

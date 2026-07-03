@@ -1,0 +1,131 @@
+{
+  "source": "CCYC Course Diagrams 2026",
+  "marks": [
+    {
+      "id": "CENTER",
+      "name": "Center",
+      "description": "Center of Corinthian Course, Orange Pole",
+      "latitude": 41.976039,
+      "longitude": -87.610111
+    },
+    {
+      "id": "N",
+      "bearingFromCenter": 0,
+      "distanceNmFromCenter": 0.75,
+      "description": "360 T, 0.75 NM from Center Mark, White Pole",
+      "latitude": 41.980136,
+      "longitude": -87.610111
+    },
+    {
+      "id": "NE",
+      "bearingFromCenter": 45,
+      "distanceNmFromCenter": 0.75,
+      "description": "045 T, 0.75 NM from Center Mark, White Pole",
+      "latitude": 41.980075,
+      "longitude": -87.599136
+    },
+    {
+      "id": "E",
+      "bearingFromCenter": 90,
+      "distanceNmFromCenter": 0.75,
+      "description": "090 T, 0.75 NM from Center Mark, White Pole",
+      "latitude": 41.976039,
+      "longitude": -87.593333
+    },
+    {
+      "id": "SE",
+      "bearingFromCenter": 135,
+      "distanceNmFromCenter": 0.75,
+      "description": "135 T, 0.75 NM from Center Mark, White Pole",
+      "latitude": 41.975614,
+      "longitude": -87.599136
+    },
+    {
+      "id": "S",
+      "bearingFromCenter": 180,
+      "distanceNmFromCenter": 0.75,
+      "description": "180 T, 0.75 NM from Center Mark, White Pole",
+      "latitude": 41.976914,
+      "longitude": -87.610111
+    },
+    {
+      "id": "SW",
+      "bearingFromCenter": 225,
+      "distanceNmFromCenter": 0.75,
+      "description": "225 T, 0.75 NM from Center Mark, White Pole",
+      "latitude": 41.975614,
+      "longitude": -87.619750
+    },
+    {
+      "id": "W",
+      "bearingFromCenter": 270,
+      "distanceNmFromCenter": 0.75,
+      "description": "270 T, 0.75 NM from Center Mark, White Pole",
+      "latitude": 41.976039,
+      "longitude": -87.619444
+    },
+    {
+      "id": "NW",
+      "bearingFromCenter": 315,
+      "distanceNmFromCenter": 0.75,
+      "description": "315 T, 0.75 NM from Center Mark, White Pole",
+      "latitude": 41.980075,
+      "longitude": -87.619750
+    }
+  ],
+  "courses": [
+    {
+      "id": "A",
+      "name": "Course A",
+      "type": "JAM typical course",
+      "variants": [
+        { "firstMark": "N", "legHeadings": [0, 225, 135, 0], "marks": ["CENTER", "N", "W", "S", "N"] },
+        { "firstMark": "NE", "legHeadings": [45, 270, 180, 45], "marks": ["CENTER", "NE", "NW", "SW", "NE"] },
+        { "firstMark": "E", "legHeadings": [90, 315, 225, 90], "marks": ["CENTER", "E", "N", "W", "E"] },
+        { "firstMark": "SE", "legHeadings": [135, 0, 270, 135], "marks": ["CENTER", "SE", "NE", "NW", "SE"] },
+        { "firstMark": "S", "legHeadings": [180, 45, 315, 180], "marks": ["CENTER", "S", "E", "N", "S"] },
+        { "firstMark": "SW", "legHeadings": [225, 90, 0, 225], "marks": ["CENTER", "SW", "SE", "NE", "SW"] },
+        { "firstMark": "W", "legHeadings": [270, null, null, 270], "marks": ["CENTER", "W"], "note": "PDF table shows xxx for legs 2 and 3." },
+        { "firstMark": "NW", "legHeadings": [315, 180, 90, 315], "marks": ["CENTER", "NW", "SW", "SE", "NW"] }
+      ]
+    },
+    {
+      "id": "B",
+      "name": "Course B",
+      "type": "Windward-leeward",
+      "note": "Diagram shows a straight windward-leeward course between opposite marks.",
+      "variants": [
+        { "firstMark": "N", "marks": ["CENTER", "N", "S", "N"] },
+        { "firstMark": "NE", "marks": ["CENTER", "NE", "SW", "NE"] },
+        { "firstMark": "E", "marks": ["CENTER", "E", "W", "E"] },
+        { "firstMark": "SE", "marks": ["CENTER", "SE", "NW", "SE"] },
+        { "firstMark": "S", "marks": ["CENTER", "S", "N", "S"] },
+        { "firstMark": "SW", "marks": ["CENTER", "SW", "NE", "SW"] },
+        { "firstMark": "W", "marks": ["CENTER", "W", "E", "W"] },
+        { "firstMark": "NW", "marks": ["CENTER", "NW", "SE", "NW"] }
+      ]
+    },
+    {
+      "id": "C",
+      "name": "Course C",
+      "type": "Modified Olympic trapezoid",
+      "variants": [
+        { "firstMark": "N", "legHeadings": [0, 247, 180, 113, 0], "marks": ["CENTER", "N", "NW", "SW", "S", "N"] },
+        { "firstMark": "NE", "legHeadings": [45, 292, 225, 158, 45], "marks": ["CENTER", "NE", "N", "W", "SW", "NE"] },
+        { "firstMark": "E", "legHeadings": [90, 337, 270, 203, 90], "marks": ["CENTER", "E", "NE", "NW", "W", "E"] },
+        { "firstMark": "SE", "legHeadings": [135, 22, 315, 248, 135], "marks": ["CENTER", "SE", "E", "N", "NW", "SE"] },
+        { "firstMark": "S", "legHeadings": [180, 67, 0, 293, 180], "marks": ["CENTER", "S", "SE", "NE", "N", "S"] },
+        { "firstMark": "SW", "legHeadings": [225, 112, 45, 338, 225], "marks": ["CENTER", "SW", "S", "E", "NE", "SW"] },
+        { "firstMark": "W", "legHeadings": [270, 157, 90, 23, 270], "marks": ["CENTER", "W", "SW", "SE", "E", "W"] },
+        { "firstMark": "NW", "legHeadings": [315, 202, 135, 68, 315], "marks": ["CENTER", "NW", "W", "S", "SE", "NW"] }
+      ]
+    },
+    {
+      "id": "D",
+      "name": "Course D",
+      "type": "Modified Olympic trapezoid",
+      "note": "PDF gives Course C/D the same heading table.",
+      "variantsReference": "C"
+    }
+  ]
+}
