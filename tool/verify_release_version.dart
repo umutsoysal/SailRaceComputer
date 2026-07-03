@@ -7,9 +7,8 @@ void main(List<String> args) {
   }
 
   final rawTag = args.single.trim();
-  final normalizedTag = rawTag.startsWith('refs/tags/')
-      ? rawTag.substring(10)
-      : rawTag;
+  final normalizedTag =
+      rawTag.startsWith('refs/tags/') ? rawTag.substring(10) : rawTag;
   final expectedVersion = normalizedTag.startsWith('v')
       ? normalizedTag.substring(1)
       : normalizedTag;
@@ -31,9 +30,10 @@ void main(List<String> args) {
   }
 
   final currentVersion = versionLine.substring('version:'.length).trim();
-  if (!currentVersion.startsWith(expectedVersion)) {
+  if (currentVersion != expectedVersion) {
     stderr.writeln(
-      'Tag $normalizedTag does not match pubspec version $currentVersion.',
+      'Tag $normalizedTag does not match exact pubspec version '
+      '$currentVersion. Use tag v$currentVersion.',
     );
     exit(1);
   }

@@ -2,6 +2,52 @@
 
 This repository can package release-ready artifacts for Android, iOS, and Web both locally and in GitHub Actions.
 
+## Versioning policy
+
+Race Mate now treats versioning as:
+
+- `x.y.z` = marketing version users see
+- `+build` = one global ship counter that must always go up
+
+Examples:
+
+- `1.0.0+7`
+- `1.0.1+8`
+- `1.1.0+9`
+
+This matters because Flutter maps the build number to:
+
+- Android `versionCode`
+- iOS `CFBundleVersion`
+
+Those store-facing build numbers should keep increasing across releases.
+
+## Local version commands
+
+Use the repo tool instead of editing `pubspec.yaml` by hand:
+
+```bash
+make version
+make version-build
+make version-patch
+make version-minor
+make version-major
+make version-tag
+```
+
+Recommended patterns:
+
+- Hotfix rebuild without changing the user-visible version:
+  - `make version-build`
+- Small shipped fix:
+  - `make version-patch`
+- Feature release:
+  - `make version-minor`
+- Big milestone:
+  - `make version-major`
+
+`make version-tag` prints the exact git tag expected by the release workflow.
+
 ## Local build commands
 
 Use the checked-in wrapper so builds work whether Flutter is on `PATH` or installed at `$HOME/flutter/bin/flutter`.
@@ -46,21 +92,35 @@ The `.github/workflows/release.yml` workflow runs on tags that start with `v`.
 
 It will:
 
-1. Verify the tag matches `pubspec.yaml` via `tool/verify_release_version.dart`.
-2. Build:
+1. Validate `pubspec.yaml` version format via `tool/version.dart check`.
+2. Verify the tag matches `pubspec.yaml` exactly via `tool/verify_release_version.dart`.
+3. Build:
    - Android APK
    - Android App Bundle (`.aab`)
    - Web release tarball
    - Unsigned iOS `.app` bundle zip
-3. Generate SHA-256 checksums.
-4. Publish all assets to a GitHub Release.
+4. Generate SHA-256 checksums.
+5. Publish all assets to a GitHub Release.
 
 Accepted tag examples:
 
-- `v1.0.0`
-- `v1.0.0+1`
+- `v1.0.0+7`
+- `v1.0.1+8`
 
-Use the `+build` suffix when you want the Git tag to match the Flutter build number exactly.
+The release workflow now expects the exact full version tag, including the
+`+build` suffix.
+
+## Shipping loop
+
+For a normal release:
+
+```bash
+make version-patch
+make ci
+git commit -am "Release 1.0.1+8"
+git tag "$(make -s version-tag)"
+git push origin main --tags
+```
 
 ## Repository secrets
 

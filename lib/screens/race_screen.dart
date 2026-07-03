@@ -34,9 +34,11 @@ class RaceScreen extends StatefulWidget {
 
 class _RaceScreenState extends State<RaceScreen> {
   static const _startOffsetOptions = <int>[0, 1, 5];
+  static const _gpsSignalTimeout = Duration(seconds: 8);
 
   StreamSubscription<Position>? _sub;
   Timer? _raceClockTimer;
+  Timer? _gpsSignalTimer;
   late final PositionSource _source;
   late final bool _ownsSource;
   final _courseLibrary = CourseLibrary();
@@ -56,6 +58,7 @@ class _RaceScreenState extends State<RaceScreen> {
   List<CourseEntry> _courseEntries = const [];
   bool _loadingCourses = true;
   bool? _lastReportedRecording;
+  bool _showNoGpsSignal = false;
 
   @override
   void initState() {
@@ -75,6 +78,7 @@ class _RaceScreenState extends State<RaceScreen> {
   @override
   void dispose() {
     _raceClockTimer?.cancel();
+    _gpsSignalTimer?.cancel();
     if (_lastReportedRecording == true) {
       widget.onRecordingChanged?.call(false);
     }
@@ -193,6 +197,7 @@ class _RaceScreenState extends State<RaceScreen> {
         _pos = null;
         _track.clear();
         _finishingRace = false;
+        _showNoGpsSignal = false;
       });
       final err = await _source.ensureReady();
       if (!mounted) return;
@@ -202,6 +207,7 @@ class _RaceScreenState extends State<RaceScreen> {
       }
       setState(() => _raceState = _RaceState.running);
       _startRaceClock();
+      _armGpsSignalTimeout();
       _reportRecordingChanged();
       AppAnalytics.instance.logRaceStarted(
         markCount: _selectedCourse.buoys.length,
@@ -223,6 +229,7 @@ class _RaceScreenState extends State<RaceScreen> {
         _raceClockElapsed = Duration.zero;
       });
       _stopRaceClock();
+      _gpsSignalTimer?.cancel();
       _reportRecordingChanged();
     }
   }
@@ -235,6 +242,7 @@ class _RaceScreenState extends State<RaceScreen> {
       _raceClockElapsed = Duration.zero;
     });
     _stopRaceClock();
+    _gpsSignalTimer?.cancel();
     _reportRecordingChanged();
     if (isLocationServicesDisabledError(error) ||
         isLocationPermissionError(error)) {
@@ -245,6 +253,7 @@ class _RaceScreenState extends State<RaceScreen> {
   void _pauseRace() {
     if (_sub == null) return;
     _sub!.pause();
+    _gpsSignalTimer?.cancel();
     if (!mounted) return;
     setState(() {
       _error = null;
@@ -261,6 +270,7 @@ class _RaceScreenState extends State<RaceScreen> {
       _error = null;
       _raceState = _RaceState.running;
     });
+    _armGpsSignalTimeout();
     _reportRecordingChanged();
   }
 
@@ -377,11 +387,13 @@ class _RaceScreenState extends State<RaceScreen> {
         _error = null;
         _finishMessage = finishMessage;
         _raceClockElapsed = finishedAt.difference(_raceStartedAt!);
+        _showNoGpsSignal = false;
       });
       _reportRecordingChanged();
     }
 
     _stopRaceClock();
+    _gpsSignalTimer?.cancel();
     await _sub?.cancel();
     _sub = null;
     try {
@@ -429,8 +441,10 @@ class _RaceScreenState extends State<RaceScreen> {
   void _onFix(Position p) {
     final point = RaceTrackPoint.fromPosition(p);
     var reachedFinish = false;
+    _armGpsSignalTimeout();
     setState(() {
       _pos = p;
+      _showNoGpsSignal = false;
       _track.add(point);
       if (_autoAdvance && _currentMark < _selectedCourse.buoys.length) {
         final mark = _selectedCourse.buoys[_currentMark];
@@ -450,6 +464,18 @@ class _RaceScreenState extends State<RaceScreen> {
     if (reachedFinish) {
       unawaited(_finishRace(completedCourse: true));
     }
+  }
+
+  void _armGpsSignalTimeout() {
+    _gpsSignalTimer?.cancel();
+    _gpsSignalTimer = Timer(_gpsSignalTimeout, () {
+      if (!mounted) return;
+      if (_raceState != _RaceState.running && _raceState != _RaceState.paused) {
+        return;
+      }
+      if (_error != null) return;
+      setState(() => _showNoGpsSignal = true);
+    });
   }
 
   void _prev() {
@@ -569,7 +595,7 @@ class _RaceScreenState extends State<RaceScreen> {
           children: [
             if ((_raceState == _RaceState.running ||
                     _raceState == _RaceState.paused) &&
-                fix == null)
+                _showNoGpsSignal)
               ColoredBox(
                 color: Colors.orange.shade700,
                 child: const SizedBox(

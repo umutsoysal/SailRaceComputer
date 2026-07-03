@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Validate version metadata
+        run: dart run tool/version.dart check
+
       - name: Verify Dart formatting
         run: dart format --output=none --set-exit-if-changed lib test tool
 

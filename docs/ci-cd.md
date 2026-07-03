@@ -10,6 +10,7 @@ This repository uses GitHub Actions for continuous integration and delivery.
 - Triggers: push to `main`, pull requests, manual dispatch
 - Checks:
   - `flutter pub get`
+  - `dart run tool/version.dart check`
   - `dart format --set-exit-if-changed`
   - `flutter analyze`
   - `flutter test --coverage`
@@ -79,4 +80,4 @@ Packaging commands are documented in [docs/release.md](release.md).
 - Web deploy path issues:
   - Verify repository name and check the base href in the deploy workflow.
 - Release workflow fails version verification:
-  - Ensure the pushed tag matches the `version:` entry in `pubspec.yaml`.
+  - Ensure the pushed tag exactly matches the full `version:` entry in `pubspec.yaml`, including `+build`.
