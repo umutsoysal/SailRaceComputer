@@ -18,7 +18,8 @@ Future<void> _launchFeedbackEmail(BuildContext context) async {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Could not open email app. Send feedback to usailfasttech+feedback@gmail.com'),
+          content: Text(
+              'Could not open email app. Send feedback to usailfasttech+feedback@gmail.com'),
         ),
       );
     }
@@ -116,6 +117,7 @@ class SettingsScreen extends StatelessWidget {
           heading: 'How your information is used',
           paragraphs: [
             'Your information is used to operate the core features of the app: creating courses, tracking races, showing race metrics, saving finished sessions, and preparing course or GPX files for sharing when you request it.',
+            'If Firebase Analytics is configured for a build of Race Mate, the app may also send limited usage events such as screen and tab visits, course saves, and race start or finish actions so the product can be improved. Race Mate should avoid sending raw course names, GPX contents, or full track payloads as analytics event parameters.',
             'Race Mate does not use your location or saved race data for advertising. The app also does not require an account to use its core features.',
           ],
         ),
@@ -123,6 +125,7 @@ class SettingsScreen extends StatelessWidget {
           heading: 'Where data is stored',
           paragraphs: [
             'Race Mate currently stores your saved course and race data locally on your device using on-device app storage.',
+            'If analytics is enabled for the app build you are using, limited usage telemetry may also be sent to Firebase and Google Analytics infrastructure as part of the app analytics service.',
             'When you choose to share a course or GPX file, the data is handed off to the sharing destination you select, such as email, messaging, cloud storage, or another app. Those services handle shared data under their own privacy terms.',
           ],
         ),
@@ -130,7 +133,7 @@ class SettingsScreen extends StatelessWidget {
           heading: 'What the app does not do',
           paragraphs: [
             'Race Mate does not include in-app advertising, does not sell your personal information, and does not run its own cloud account system for syncing user race history at this time.',
-            'If future versions add syncing, accounts, analytics, or additional data collection, this policy should be updated before those features are used.',
+            'If future versions add syncing, user accounts, broader telemetry, or additional data collection beyond what is described here, this policy should be updated before those features are used.',
           ],
         ),
         LegalDocumentSection(

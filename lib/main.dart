@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app_shell.dart';
 import 'models/course.dart';
+import 'services/app_analytics.dart';
 import 'services/course_file.dart';
 import 'services/course_store.dart';
 import 'widgets/imported_course_picker_dialog.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppAnalytics.instance.initialize();
   runApp(const SailRaceApp());
 }
 

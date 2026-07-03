@@ -64,7 +64,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('race tab is centered in the bottom navigation bar', (
+  testWidgets(
+      'race tab stays between map and recordings in the bottom navigation bar',
+      (
     tester,
   ) async {
     final course = Course(
@@ -84,10 +86,10 @@ void main() {
 
     final mapCenter = tester.getCenter(find.text('Map'));
     final raceCenter = tester.getCenter(find.text('Race'));
-    final libraryCenter = tester.getCenter(find.text('Library'));
+    final recordingsCenter = tester.getCenter(find.text('Recordings'));
 
     expect(raceCenter.dx, greaterThan(mapCenter.dx));
-    expect(raceCenter.dx, lessThan(libraryCenter.dx));
+    expect(raceCenter.dx, lessThan(recordingsCenter.dx));
   });
 
   testWidgets('race tab stays highlighted while recording is active', (
@@ -122,7 +124,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
     await _drainAsyncUi(tester);
 
-    await tester.tap(find.text('Library'));
+    await tester.tap(find.text('Recordings'));
     await _drainAsyncUi(tester);
 
     final indicatorFinder = find.byKey(

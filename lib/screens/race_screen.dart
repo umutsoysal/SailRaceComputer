@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/course.dart';
+import '../services/app_analytics.dart';
 import '../services/course_library.dart';
 import '../services/position_source.dart';
 import '../services/race_session_store.dart';
@@ -213,6 +214,10 @@ class _RaceScreenState extends State<RaceScreen> {
       setState(() => _raceState = _RaceState.running);
       _startRaceClock();
       _reportRecordingChanged();
+      AppAnalytics.instance.logRaceStarted(
+        markCount: _selectedCourse.buoys.length,
+        startOffsetMinutes: _startOffsetMinutes,
+      );
       _sub = _source.stream.listen(
         _onFix,
         onError: (e) {
@@ -362,6 +367,13 @@ class _RaceScreenState extends State<RaceScreen> {
     _sub = null;
     try {
       await _sessionStore.saveCompleted(record);
+      AppAnalytics.instance.logRaceFinished(
+        totalMarks: _selectedCourse.buoys.length,
+        finalMarkIndex: _currentMark,
+        completedCourse: completedCourse,
+        durationSeconds: duration.inSeconds,
+        trackPointCount: pointCount,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -437,7 +449,9 @@ class _RaceScreenState extends State<RaceScreen> {
     if (buoys.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: const Text('Race')),
-        body: const Center(child: Text('Add buoys to create the course on the Course tab or choose one of the existing courses.')),
+        body: const Center(
+            child: Text(
+                'Add buoys to create the course on the Course tab or choose one of the existing courses.')),
       );
     }
 

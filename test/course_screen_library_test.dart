@@ -12,7 +12,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('bottom navigation exposes library and settings tabs', (
+  testWidgets(
+      'bottom navigation exposes a single courses tab plus recordings and settings',
+      (
     tester,
   ) async {
     final raceStore = RaceSessionStore();
@@ -41,18 +43,34 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Course'), findsOneWidget);
     expect(find.text('Race'), findsOneWidget);
     expect(find.text('Map'), findsOneWidget);
-    expect(find.text('Library'), findsOneWidget);
+    expect(find.text('Courses'), findsOneWidget);
+    expect(find.text('Recordings'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
 
-    await tester.tap(find.text('Library'));
+    await tester.tap(find.text('Courses'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Races'), findsOneWidget);
+    expect(find.text('Add buoy'), findsOneWidget);
+    expect(find.byTooltip('Library'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Library'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bundled Courses'), findsOneWidget);
+    expect(find.text('Saved Courses'), findsNothing);
+    expect(find.text('Recorded Races'), findsNothing);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Recordings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Recorded Races'), findsOneWidget);
     expect(find.text('Wednesday Series'), findsOneWidget);
-    expect(find.byTooltip('View GPX'), findsOneWidget);
+    expect(find.byTooltip('Race actions'), findsOneWidget);
 
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();

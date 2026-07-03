@@ -9,10 +9,23 @@ import '../services/course_file.dart';
 import '../services/course_library.dart';
 import '../services/race_session_store.dart';
 
+enum LibraryContentMode { courses, recordings }
+
+enum _LibraryGrouping { defaultView, name }
+
 class LibraryScreen extends StatefulWidget {
-  const LibraryScreen({super.key, required this.onCourseLoaded});
+  const LibraryScreen({
+    super.key,
+    required this.onCourseLoaded,
+    required this.title,
+    required this.mode,
+    this.showModeSwitcher = false,
+  });
 
   final ValueChanged<Course> onCourseLoaded;
+  final String title;
+  final LibraryContentMode mode;
+  final bool showModeSwitcher;
 
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
@@ -25,11 +38,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
   List<CourseEntry> _courseEntries = const [];
   List<RaceSessionEntry> _raceEntries = const [];
   bool _loading = true;
+  late LibraryContentMode _filter;
+  _LibraryGrouping _grouping = _LibraryGrouping.defaultView;
 
   @override
   void initState() {
     super.initState();
+    _filter = widget.mode;
     _reload();
+  }
+
+  @override
+  void didUpdateWidget(covariant LibraryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.showModeSwitcher && oldWidget.mode != widget.mode) {
+      _filter = widget.mode;
+    }
   }
 
   Future<void> _reload() async {
@@ -138,95 +162,249 @@ class _LibraryScreenState extends State<LibraryScreen> {
     _snack('Removed "${entry.fileName}" from library.');
   }
 
+  String _groupKeyForCourse(CourseEntry entry) {
+    final groupName = entry.groupName?.trim();
+    if (groupName != null && groupName.isNotEmpty) {
+      return groupName;
+    }
+    return entry.name;
+  }
+
+  Map<String, List<CourseEntry>> _groupCoursesByName(
+      List<CourseEntry> entries) {
+    final grouped = <String, List<CourseEntry>>{};
+    for (final entry in entries) {
+      final key = _groupKeyForCourse(entry);
+      grouped.putIfAbsent(key, () => []).add(entry);
+    }
+    final orderedKeys = grouped.keys.toList()..sort();
+    return {
+      for (final key in orderedKeys)
+        key: grouped[key]!..sort((a, b) => a.name.compareTo(b.name)),
+    };
+  }
+
+  Map<String, List<RaceSessionEntry>> _groupRacesByName(
+    List<RaceSessionEntry> entries,
+  ) {
+    final grouped = <String, List<RaceSessionEntry>>{};
+    for (final entry in entries) {
+      grouped.putIfAbsent(entry.title, () => []).add(entry);
+    }
+    final orderedKeys = grouped.keys.toList()..sort();
+    return {
+      for (final key in orderedKeys)
+        key: grouped[key]!
+          ..sort((a, b) => b.record.startedAt.compareTo(a.record.startedAt)),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final bundled = _courseEntries.where((entry) => entry.isBundled).toList();
     final saved = _courseEntries.where((entry) => !entry.isBundled).toList();
-    final hasAnyEntries =
-        bundled.isNotEmpty || saved.isNotEmpty || _raceEntries.isNotEmpty;
+    final showRaces = _filter == LibraryContentMode.recordings;
+    final showCourses = _filter == LibraryContentMode.courses;
+    final visibleRaces = showRaces ? _raceEntries : const <RaceSessionEntry>[];
+    final visibleSaved = showCourses ? saved : const <CourseEntry>[];
+    final visibleBundled = showCourses ? bundled : const <CourseEntry>[];
+    final hasAnyEntries = visibleBundled.isNotEmpty ||
+        visibleSaved.isNotEmpty ||
+        visibleRaces.isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Library')),
+      appBar: AppBar(title: Text(widget.title)),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : !hasAnyEntries
-          ? const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'No saved items yet. Save a course or finish a race to add it to the library.',
-                  textAlign: TextAlign.center,
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                      'No saved items yet. Save a course or finish a race to add it to the library.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _reload,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(top: 8, bottom: 24),
+                    children: [
+                      _libraryControls(),
+                      if (_grouping == _LibraryGrouping.defaultView) ...[
+                        if (visibleRaces.isNotEmpty) ...[
+                          _sectionHeader(context, 'Recorded Races'),
+                          ...visibleRaces.map(_buildRaceRow),
+                        ],
+                        if (visibleSaved.isNotEmpty) ...[
+                          _sectionHeader(context, 'Saved Courses'),
+                          ...visibleSaved.map(_buildCourseRow),
+                        ],
+                        if (visibleBundled.isNotEmpty) ...[
+                          _sectionHeader(context, 'Bundled Courses'),
+                          ...visibleBundled.map(_buildCourseRow),
+                        ],
+                      ] else ...[
+                        if (visibleRaces.isNotEmpty)
+                          ..._buildGroupedRaceSections(visibleRaces),
+                        if (visibleSaved.isNotEmpty) ...[
+                          _sectionHeader(context, 'Saved Courses'),
+                          ..._buildGroupedCourseSections(visibleSaved),
+                        ],
+                        if (visibleBundled.isNotEmpty) ...[
+                          _sectionHeader(context, 'Bundled Courses'),
+                          ..._buildGroupedCourseSections(visibleBundled),
+                        ],
+                      ],
+                    ],
+                  ),
                 ),
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: _reload,
-              child: ListView(
-                padding: const EdgeInsets.only(top: 8, bottom: 24),
+    );
+  }
+
+  Widget _libraryControls() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (widget.showModeSwitcher) ...[
+                SegmentedButton<LibraryContentMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: LibraryContentMode.courses,
+                      label: Text('Courses'),
+                    ),
+                    ButtonSegment(
+                      value: LibraryContentMode.recordings,
+                      label: Text('Recordings'),
+                    ),
+                  ],
+                  selected: {_filter},
+                  onSelectionChanged: (selection) {
+                    setState(() => _filter = selection.first);
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+              Row(
                 children: [
-                  if (_raceEntries.isNotEmpty) ...[
-                    _sectionHeader(context, 'Races'),
-                    ..._raceEntries.map(_buildRaceRow),
-                  ],
-                  if (saved.isNotEmpty) ...[
-                    _sectionHeader(context, 'Saved Courses'),
-                    ...saved.map(_buildCourseRow),
-                  ],
-                  if (bundled.isNotEmpty) ...[
-                    _sectionHeader(context, 'Bundled Courses'),
-                    ...bundled.map(_buildCourseRow),
-                  ],
+                  Text(
+                    'Group by',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownButtonFormField<_LibraryGrouping>(
+                      value: _grouping,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: _LibraryGrouping.defaultView,
+                          child: Text('Default'),
+                        ),
+                        DropdownMenuItem(
+                          value: _LibraryGrouping.name,
+                          child: Text('Name'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() => _grouping = value);
+                      },
+                    ),
+                  ),
                 ],
               ),
-            ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Widget _sectionHeader(BuildContext context, String title) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-    child: Text(
-      title,
-      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-        color: Theme.of(context).colorScheme.primary,
-      ),
-    ),
-  );
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        child: Text(
+          title,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+        ),
+      );
+
+  List<Widget> _buildGroupedCourseSections(List<CourseEntry> entries) {
+    final grouped = _groupCoursesByName(entries);
+    return [
+      for (final group in grouped.entries) ...[
+        _subsectionHeader(group.key),
+        ...group.value.map(_buildCourseRow),
+      ],
+    ];
+  }
+
+  List<Widget> _buildGroupedRaceSections(List<RaceSessionEntry> entries) {
+    final grouped = _groupRacesByName(entries);
+    return [
+      _sectionHeader(context, 'Recorded Races'),
+      for (final group in grouped.entries) ...[
+        _subsectionHeader(group.key),
+        ...group.value.map(_buildRaceRow),
+      ],
+    ];
+  }
+
+  Widget _subsectionHeader(String title) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
+        child: Text(
+          title,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+      );
 
   Widget _buildCourseRow(CourseEntry entry) {
-    final parts = <String>[
-      if (entry.groupName != null && entry.groupName!.isNotEmpty)
-        entry.groupName!,
-      if (entry.details != null && entry.details!.isNotEmpty) entry.details!,
-      '${entry.buoyCount} mark${entry.buoyCount == 1 ? '' : 's'}',
-      if (entry.isBundled) 'bundled',
-    ];
+    final subtitle = entry.details?.trim().isNotEmpty == true
+        ? entry.details!.trim()
+        : '${entry.buoyCount} mark${entry.buoyCount == 1 ? '' : 's'}';
     return ListTile(
+      onTap: () => _loadCourse(entry),
       leading: CircleAvatar(
         child: Icon(
           entry.isBundled ? Icons.inventory_2_outlined : Icons.bookmark,
         ),
       ),
       title: Text(entry.name),
-      subtitle: Text(parts.join(' · ')),
-      trailing: Wrap(
-        spacing: 8,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.ios_share),
-            tooltip: 'Share course',
-            onPressed: () => _shareCourse(entry),
+      subtitle: Text(subtitle),
+      trailing: PopupMenuButton<String>(
+        tooltip: 'Course actions',
+        onSelected: (value) {
+          switch (value) {
+            case 'share':
+              _shareCourse(entry);
+              break;
+            case 'remove':
+              _deleteCourse(entry);
+              break;
+          }
+        },
+        itemBuilder: (context) => [
+          const PopupMenuItem(
+            value: 'share',
+            child: Text('Share course'),
           ),
           if (!entry.isBundled)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              tooltip: 'Remove course',
-              onPressed: () => _deleteCourse(entry),
+            const PopupMenuItem(
+              value: 'remove',
+              child: Text('Remove course'),
             ),
-          FilledButton.tonal(
-            onPressed: () => _loadCourse(entry),
-            child: const Text('Load'),
-          ),
         ],
       ),
     );
@@ -234,27 +412,30 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Widget _buildRaceRow(RaceSessionEntry entry) {
     return ListTile(
+      onTap: () => _viewRace(entry),
       leading: const CircleAvatar(child: Icon(Icons.route_outlined)),
       title: Text(entry.title),
-      subtitle: Text('${entry.fileName} · ${entry.subtitle}'),
-      trailing: Wrap(
-        spacing: 8,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.visibility_outlined),
-            tooltip: 'View GPX',
-            onPressed: () => _viewRace(entry),
+      subtitle: Text(entry.subtitle),
+      trailing: PopupMenuButton<String>(
+        tooltip: 'Race actions',
+        onSelected: (value) {
+          switch (value) {
+            case 'share':
+              _shareRace(entry);
+              break;
+            case 'remove':
+              _deleteRace(entry);
+              break;
+          }
+        },
+        itemBuilder: (context) => const [
+          PopupMenuItem(
+            value: 'share',
+            child: Text('Share GPX'),
           ),
-          IconButton(
-            icon: const Icon(Icons.ios_share),
-            tooltip: 'Share GPX',
-            onPressed: () => _shareRace(entry),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: 'Remove race',
-            onPressed: () => _deleteRace(entry),
+          PopupMenuItem(
+            value: 'remove',
+            child: Text('Remove race'),
           ),
         ],
       ),

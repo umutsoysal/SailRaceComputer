@@ -5,9 +5,10 @@ import 'screens/library_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/race_screen.dart';
 import 'screens/settings_screen.dart';
+import 'services/app_analytics.dart';
 import 'services/position_source.dart';
 
-/// The user-facing app: Course editor + Race screen tabs.
+/// The user-facing app: course editing, racing, recordings, and settings.
 ///
 /// Production passes no [positionSource] (real GPS is used). The dev simulator
 /// passes a fake source so the same widget tree can be exercised on the desk.
@@ -35,6 +36,15 @@ class _AppShellState extends State<AppShell> {
   var _raceRecording = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _logTabSelection(_tab);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
@@ -58,11 +68,13 @@ class _AppShellState extends State<AppShell> {
             },
           ),
           LibraryScreen(
-            key: ValueKey('library-$_libraryVersion'),
+            key: ValueKey('recordings-$_libraryVersion'),
             onCourseLoaded: (course) {
               widget.onCourseChanged(course);
               setState(() => _tab = 0);
             },
+            title: 'Recordings',
+            mode: LibraryContentMode.recordings,
           ),
           const SettingsScreen(),
         ],
@@ -71,17 +83,18 @@ class _AppShellState extends State<AppShell> {
         selectedIndex: _tab,
         onDestinationSelected: (i) {
           setState(() {
-            if (i == 3 && _tab != 3) {
+            if (i == 3 && _tab != i) {
               _libraryVersion++;
             }
             _tab = i;
           });
+          _logTabSelection(i);
         },
         destinations: [
           const NavigationDestination(
             icon: Icon(Icons.flag_outlined),
             selectedIcon: Icon(Icons.flag),
-            label: 'Course',
+            label: 'Courses',
           ),
           const NavigationDestination(
             icon: Icon(Icons.map_outlined),
@@ -100,9 +113,9 @@ class _AppShellState extends State<AppShell> {
             label: 'Race',
           ),
           const NavigationDestination(
-            icon: Icon(Icons.library_books_outlined),
-            selectedIcon: Icon(Icons.library_books),
-            label: 'Library',
+            icon: Icon(Icons.history_outlined),
+            selectedIcon: Icon(Icons.history),
+            label: 'Recordings',
           ),
           const NavigationDestination(
             icon: Icon(Icons.settings_outlined),
@@ -112,6 +125,21 @@ class _AppShellState extends State<AppShell> {
         ],
       ),
     );
+  }
+
+  void _logTabSelection(int index) {
+    final tabName = switch (index) {
+      0 => 'courses',
+      1 => 'map',
+      2 => 'race',
+      3 => 'recordings',
+      4 => 'settings',
+      _ => 'unknown',
+    };
+    AppAnalytics.instance.logTabSelected(tabName);
+    if (tabName == 'recordings') {
+      AppAnalytics.instance.logLibraryOpened(source: 'bottom_nav');
+    }
   }
 }
 

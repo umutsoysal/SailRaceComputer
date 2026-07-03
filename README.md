@@ -62,6 +62,12 @@ A GPS-powered sailing race companion app for iOS, Android, and Web. Race Mate tr
 make bootstrap
 ```
 
+### Optional: configure Firebase analytics
+
+Firebase core and analytics scaffolding are wired into the app, but they stay
+disabled until you connect the repo to a real Firebase project. See
+[docs/firebase.md](docs/firebase.md).
+
 ### Run on a device or simulator
 
 ```bash

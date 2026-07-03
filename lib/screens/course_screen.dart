@@ -1,12 +1,11 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/course.dart';
+import '../services/app_analytics.dart';
 import '../services/course_file.dart';
 import '../services/course_library.dart';
-import '../services/race_session_store.dart';
 import '../utils/geo.dart';
 import '../widgets/imported_course_picker_dialog.dart';
 
@@ -28,7 +27,6 @@ class CourseScreen extends StatefulWidget {
 class _CourseScreenState extends State<CourseScreen> {
   late Course _course;
   final _library = CourseLibrary();
-  final _raceSessions = RaceSessionStore();
 
   @override
   void initState() {
@@ -271,6 +269,10 @@ class _CourseScreenState extends State<CourseScreen> {
 
   Future<void> _saveCurrentToLibrary() async {
     await _library.save(_course);
+    AppAnalytics.instance.logCourseSaved(
+      buoyCount: _course.buoys.length,
+      source: 'course_editor',
+    );
     _snack('Saved "${_course.name}" to library.');
   }
 
@@ -322,72 +324,15 @@ class _CourseScreenState extends State<CourseScreen> {
     }
   }
 
-  Future<void> _shareRaceEntry(RaceSessionEntry entry) async {
-    try {
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [
-            XFile.fromData(
-              Uint8List.fromList(utf8.encode(entry.gpx)),
-              mimeType: 'application/gpx+xml',
-              name: entry.fileName,
-            ),
-          ],
-          fileNameOverrides: [entry.fileName],
-          subject: entry.title,
-          text: 'GPX track exported from Race Mate.',
-          downloadFallbackEnabled: true,
-        ),
-      );
-    } catch (err) {
-      if (!mounted) return;
-      _snack('Share failed: $err');
-    }
-  }
-
-  Future<void> _viewRaceEntry(RaceSessionEntry entry) async {
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(entry.fileName),
-        content: SizedBox(
-          width: 520,
-          child: SingleChildScrollView(
-            child: SelectableText(
-              entry.gpx,
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
-          ),
-          FilledButton.icon(
-            icon: const Icon(Icons.ios_share),
-            label: const Text('Share GPX'),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _shareRaceEntry(entry);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _openLibrary() async {
+    AppAnalytics.instance.logLibraryOpened(source: 'course_editor');
     final entries = await _library.listAll();
-    final raceEntries = await _raceSessions.listSaved();
     if (!mounted) return;
     final action = await showModalBottomSheet<_LibraryAction>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (ctx) =>
-          _LibrarySheet(entries: entries, raceEntries: raceEntries),
+      builder: (ctx) => _LibrarySheet(entries: entries),
     );
     if (action == null) return;
     switch (action.kind) {
@@ -406,16 +351,6 @@ class _CourseScreenState extends State<CourseScreen> {
         break;
       case _LibraryActionKind.newCourse:
         _newCourse();
-        break;
-      case _LibraryActionKind.viewRace:
-        _viewRaceEntry(action.raceEntry!);
-        break;
-      case _LibraryActionKind.shareRace:
-        _shareRaceEntry(action.raceEntry!);
-        break;
-      case _LibraryActionKind.deleteRace:
-        await _raceSessions.remove(action.raceEntry!.id);
-        _snack('Removed "${action.raceEntry!.fileName}" from library.');
         break;
     }
   }
@@ -702,33 +637,27 @@ enum _LibraryActionKind {
   shareCourse,
   deleteCourse,
   newCourse,
-  viewRace,
-  shareRace,
-  deleteRace,
 }
 
 class _LibraryAction {
-  _LibraryAction(this.kind, {this.courseEntry, this.raceEntry});
+  _LibraryAction(this.kind, {this.courseEntry});
 
   final _LibraryActionKind kind;
   final CourseEntry? courseEntry;
-  final RaceSessionEntry? raceEntry;
 }
 
 enum _ImportChoice { replace, addNew }
 
 class _LibrarySheet extends StatelessWidget {
-  const _LibrarySheet({required this.entries, required this.raceEntries});
+  const _LibrarySheet({required this.entries});
 
   final List<CourseEntry> entries;
-  final List<RaceSessionEntry> raceEntries;
 
   @override
   Widget build(BuildContext context) {
     final bundled = entries.where((e) => e.isBundled).toList();
     final saved = entries.where((e) => !e.isBundled).toList();
-    final hasAnyEntries =
-        bundled.isNotEmpty || saved.isNotEmpty || raceEntries.isNotEmpty;
+    final hasAnyEntries = bundled.isNotEmpty || saved.isNotEmpty;
 
     return SafeArea(
       child: ConstrainedBox(
@@ -764,7 +693,7 @@ class _LibrarySheet extends StatelessWidget {
               const Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
-                  'No saved items yet. Save a course or finish a race to add it to the library.',
+                  'No saved courses yet. Save a course to add it here.',
                 ),
               )
             else
@@ -772,10 +701,6 @@ class _LibrarySheet extends StatelessWidget {
                 child: ListView(
                   shrinkWrap: true,
                   children: [
-                    if (raceEntries.isNotEmpty) ...[
-                      _sectionHeader(context, 'Races'),
-                      ...raceEntries.map((e) => _raceRow(context, e)),
-                    ],
                     if (saved.isNotEmpty) ...[
                       _sectionHeader(context, 'Saved Courses'),
                       ...saved.map((e) => _courseRow(context, e)),
@@ -795,14 +720,14 @@ class _LibrarySheet extends StatelessWidget {
   }
 
   Widget _sectionHeader(BuildContext context, String title) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-    child: Text(
-      title,
-      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-        color: Theme.of(context).colorScheme.primary,
-      ),
-    ),
-  );
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+        child: Text(
+          title,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+        ),
+      );
 
   Widget _courseRow(BuildContext context, CourseEntry e) {
     final parts = <String>[
@@ -847,46 +772,6 @@ class _LibrarySheet extends StatelessWidget {
               _LibraryAction(_LibraryActionKind.loadCourse, courseEntry: e),
             ),
             child: const Text('Load'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _raceRow(BuildContext context, RaceSessionEntry entry) {
-    return ListTile(
-      leading: const CircleAvatar(child: Icon(Icons.route_outlined)),
-      title: Text(entry.title),
-      subtitle: Text('${entry.fileName} · ${entry.subtitle}'),
-      onTap: () => Navigator.pop(
-        context,
-        _LibraryAction(_LibraryActionKind.viewRace, raceEntry: entry),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.ios_share),
-            tooltip: 'Share GPX',
-            onPressed: () => Navigator.pop(
-              context,
-              _LibraryAction(_LibraryActionKind.shareRace, raceEntry: entry),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: 'Remove',
-            onPressed: () => Navigator.pop(
-              context,
-              _LibraryAction(_LibraryActionKind.deleteRace, raceEntry: entry),
-            ),
-          ),
-          FilledButton.tonal(
-            onPressed: () => Navigator.pop(
-              context,
-              _LibraryAction(_LibraryActionKind.viewRace, raceEntry: entry),
-            ),
-            child: const Text('View GPX'),
           ),
         ],
       ),
