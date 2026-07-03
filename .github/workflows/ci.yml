@@ -5,6 +5,11 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -28,7 +33,7 @@ jobs:
         run: flutter pub get
 
       - name: Verify Dart formatting
-        run: dart format --output=none --set-exit-if-changed lib test
+        run: dart format --output=none --set-exit-if-changed lib test tool
 
       - name: Run static analysis
         run: flutter analyze
@@ -42,3 +47,48 @@ jobs:
           name: coverage-lcov
           path: coverage/lcov.info
           if-no-files-found: error
+
+  build-web:
+    runs-on: ubuntu-latest
+    needs: analyze-and-test
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build production web bundle
+        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+
+  build-android:
+    runs-on: ubuntu-latest
+    needs: analyze-and-test
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Build release Android App Bundle
+        run: flutter build appbundle --release

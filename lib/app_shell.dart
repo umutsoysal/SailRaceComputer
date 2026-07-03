@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'models/course.dart';
 import 'screens/course_screen.dart';
+import 'screens/library_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/race_screen.dart';
 import 'services/position_source.dart';
@@ -29,6 +30,7 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   late int _tab = widget.initialTab;
+  var _libraryVersion = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -40,19 +42,34 @@ class _AppShellState extends State<AppShell> {
             course: widget.course,
             onChanged: widget.onCourseChanged,
           ),
+          RaceScreen(
+            course: widget.course,
+            positionSource: widget.positionSource,
+            onCourseChanged: widget.onCourseChanged,
+          ),
           MapScreen(
             course: widget.course,
             positionSource: widget.positionSource,
           ),
-          RaceScreen(
-            course: widget.course,
-            positionSource: widget.positionSource,
+          LibraryScreen(
+            key: ValueKey('library-$_libraryVersion'),
+            onCourseLoaded: (course) {
+              widget.onCourseChanged(course);
+              setState(() => _tab = 0);
+            },
           ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
+        onDestinationSelected: (i) {
+          setState(() {
+            if (i == 3 && _tab != 3) {
+              _libraryVersion++;
+            }
+            _tab = i;
+          });
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.flag_outlined),
@@ -60,14 +77,19 @@ class _AppShellState extends State<AppShell> {
             label: 'Course',
           ),
           NavigationDestination(
+            icon: Icon(Icons.speed_outlined),
+            selectedIcon: Icon(Icons.speed),
+            label: 'Race',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.map_outlined),
             selectedIcon: Icon(Icons.map),
             label: 'Map',
           ),
           NavigationDestination(
-            icon: Icon(Icons.speed_outlined),
-            selectedIcon: Icon(Icons.speed),
-            label: 'Race',
+            icon: Icon(Icons.library_books_outlined),
+            selectedIcon: Icon(Icons.library_books),
+            label: 'Library',
           ),
         ],
       ),
