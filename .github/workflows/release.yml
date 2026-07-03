@@ -66,7 +66,7 @@ jobs:
           tar -czf release-assets/race-mate-web-${GITHUB_REF_NAME}.tar.gz -C build/web .
 
       - name: Upload packaged Android and Web assets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-assets-android-web
           path: release-assets/*
@@ -105,7 +105,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app release-assets/race-mate-ios-${GITHUB_REF_NAME}-ios-b${IOS_BUILD}-unsigned.zip
 
       - name: Upload packaged iOS asset
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-assets-ios
           path: release-assets/*
