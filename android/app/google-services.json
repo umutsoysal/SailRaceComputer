@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "31842580519",
+    "project_id": "race-maite",
+    "storage_bucket": "race-maite.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:31842580519:android:c8438259d68d72b1dbb602",
+        "android_client_info": {
+          "package_name": "com.sailrace.sail_race_computer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7KW9flaOARafTzlCXzVGqyDHQiiU3d5E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
