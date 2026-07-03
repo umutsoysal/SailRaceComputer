@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/course.dart';
 import '../services/course_file.dart';
 import '../services/course_library.dart';
+import '../services/race_session_store.dart';
 import '../utils/geo.dart';
 import '../widgets/imported_course_picker_dialog.dart';
 
@@ -26,6 +28,7 @@ class CourseScreen extends StatefulWidget {
 class _CourseScreenState extends State<CourseScreen> {
   late Course _course;
   final _library = CourseLibrary();
+  final _raceSessions = RaceSessionStore();
 
   @override
   void initState() {
@@ -315,27 +318,101 @@ class _CourseScreenState extends State<CourseScreen> {
     }
   }
 
+  Future<void> _shareRaceEntry(RaceSessionEntry entry) async {
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(
+              Uint8List.fromList(utf8.encode(entry.gpx)),
+              mimeType: 'application/gpx+xml',
+              name: entry.fileName,
+            ),
+          ],
+          fileNameOverrides: [entry.fileName],
+          subject: entry.title,
+          text: 'GPX track exported from Race Mate.',
+          downloadFallbackEnabled: true,
+        ),
+      );
+    } catch (err) {
+      if (!mounted) return;
+      _snack('Share failed: $err');
+    }
+  }
+
+  Future<void> _viewRaceEntry(RaceSessionEntry entry) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(entry.fileName),
+        content: SizedBox(
+          width: 520,
+          child: SingleChildScrollView(
+            child: SelectableText(
+              entry.gpx,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+          FilledButton.icon(
+            icon: const Icon(Icons.ios_share),
+            label: const Text('Share GPX'),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _shareRaceEntry(entry);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openLibrary() async {
     final entries = await _library.listAll();
+    final raceEntries = await _raceSessions.listSaved();
     if (!mounted) return;
     final action = await showModalBottomSheet<_LibraryAction>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (ctx) => _LibrarySheet(entries: entries),
+      builder: (ctx) =>
+          _LibrarySheet(entries: entries, raceEntries: raceEntries),
     );
     if (action == null) return;
     switch (action.kind) {
-      case _LibraryActionKind.load:
-        _applyImported(action.entry!.course,
-            sourceName: action.entry!.isBundled ? 'bundled' : 'library');
-      case _LibraryActionKind.share:
-        _exportShareEntry(action.entry!);
-      case _LibraryActionKind.delete:
-        await _library.remove(action.entry!.id);
-        _snack('Removed "${action.entry!.name}" from library.');
+      case _LibraryActionKind.loadCourse:
+        _applyImported(
+          action.courseEntry!.course,
+          sourceName: action.courseEntry!.isBundled ? 'bundled' : 'library',
+        );
+        break;
+      case _LibraryActionKind.shareCourse:
+        _exportShareEntry(action.courseEntry!);
+        break;
+      case _LibraryActionKind.deleteCourse:
+        await _library.remove(action.courseEntry!.id);
+        _snack('Removed "${action.courseEntry!.name}" from library.');
+        break;
       case _LibraryActionKind.newCourse:
         _newCourse();
+        break;
+      case _LibraryActionKind.viewRace:
+        _viewRaceEntry(action.raceEntry!);
+        break;
+      case _LibraryActionKind.shareRace:
+        _shareRaceEntry(action.raceEntry!);
+        break;
+      case _LibraryActionKind.deleteRace:
+        await _raceSessions.remove(action.raceEntry!.id);
+        _snack('Removed "${action.raceEntry!.fileName}" from library.');
+        break;
     }
   }
 
@@ -347,7 +424,7 @@ class _CourseScreenState extends State<CourseScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.library_books_outlined),
-            tooltip: 'Course library',
+            tooltip: 'Library',
             onPressed: _openLibrary,
           ),
           IconButton(
@@ -362,16 +439,22 @@ class _CourseScreenState extends State<CourseScreen> {
               switch (v) {
                 case 'new':
                   _newCourse();
+                  break;
                 case 'save':
                   _saveCurrentToLibrary();
+                  break;
                 case 'share':
                   _exportShare();
+                  break;
                 case 'view':
                   _exportShowJson();
+                  break;
                 case 'pick':
                   _importFromFile();
+                  break;
                 case 'paste':
                   _importFromPaste();
+                  break;
               }
             },
             itemBuilder: (_) => const [
@@ -600,25 +683,45 @@ class _BuoyDialogState extends State<_BuoyDialog> {
   }
 }
 
-enum _LibraryActionKind { load, share, delete, newCourse }
+enum _LibraryActionKind {
+  loadCourse,
+  shareCourse,
+  deleteCourse,
+  newCourse,
+  viewRace,
+  shareRace,
+  deleteRace,
+}
 
 class _LibraryAction {
-  _LibraryAction(this.kind, [this.entry]);
+  _LibraryAction(
+    this.kind, {
+    this.courseEntry,
+    this.raceEntry,
+  });
+
   final _LibraryActionKind kind;
-  final CourseEntry? entry;
+  final CourseEntry? courseEntry;
+  final RaceSessionEntry? raceEntry;
 }
 
 enum _ImportChoice { replace, addNew }
 
 class _LibrarySheet extends StatelessWidget {
-  const _LibrarySheet({required this.entries});
+  const _LibrarySheet({
+    required this.entries,
+    required this.raceEntries,
+  });
 
   final List<CourseEntry> entries;
+  final List<RaceSessionEntry> raceEntries;
 
   @override
   Widget build(BuildContext context) {
     final bundled = entries.where((e) => e.isBundled).toList();
     final saved = entries.where((e) => !e.isBundled).toList();
+    final hasAnyEntries =
+        bundled.isNotEmpty || saved.isNotEmpty || raceEntries.isNotEmpty;
 
     return SafeArea(
       child: ConstrainedBox(
@@ -635,7 +738,7 @@ class _LibrarySheet extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Course library',
+                      'Library',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
@@ -650,12 +753,11 @@ class _LibrarySheet extends StatelessWidget {
                 ],
               ),
             ),
-            if (entries.isEmpty)
+            if (!hasAnyEntries)
               const Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
-                  'No courses yet. Import a file or save the current course '
-                  'to the library from the menu.',
+                  'No saved items yet. Save a course or finish a race to add it to the library.',
                 ),
               )
             else
@@ -663,13 +765,17 @@ class _LibrarySheet extends StatelessWidget {
                 child: ListView(
                   shrinkWrap: true,
                   children: [
-                    if (bundled.isNotEmpty) ...[
-                      _sectionHeader(context, 'Bundled'),
-                      ...bundled.map((e) => _row(context, e)),
+                    if (raceEntries.isNotEmpty) ...[
+                      _sectionHeader(context, 'Races'),
+                      ...raceEntries.map((e) => _raceRow(context, e)),
                     ],
                     if (saved.isNotEmpty) ...[
-                      _sectionHeader(context, 'Saved'),
-                      ...saved.map((e) => _row(context, e)),
+                      _sectionHeader(context, 'Saved Courses'),
+                      ...saved.map((e) => _courseRow(context, e)),
+                    ],
+                    if (bundled.isNotEmpty) ...[
+                      _sectionHeader(context, 'Bundled Courses'),
+                      ...bundled.map((e) => _courseRow(context, e)),
                     ],
                   ],
                 ),
@@ -689,7 +795,7 @@ class _LibrarySheet extends StatelessWidget {
                 )),
       );
 
-  Widget _row(BuildContext context, CourseEntry e) {
+  Widget _courseRow(BuildContext context, CourseEntry e) {
     final parts = <String>[
       if (e.groupName != null && e.groupName!.isNotEmpty) e.groupName!,
       if (e.details != null && e.details!.isNotEmpty) e.details!,
@@ -704,7 +810,7 @@ class _LibrarySheet extends StatelessWidget {
       subtitle: Text(parts.join(' · ')),
       onTap: () => Navigator.pop(
         context,
-        _LibraryAction(_LibraryActionKind.load, e),
+        _LibraryAction(_LibraryActionKind.loadCourse, courseEntry: e),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -714,7 +820,7 @@ class _LibrarySheet extends StatelessWidget {
             tooltip: 'Share',
             onPressed: () => Navigator.pop(
               context,
-              _LibraryAction(_LibraryActionKind.share, e),
+              _LibraryAction(_LibraryActionKind.shareCourse, courseEntry: e),
             ),
           ),
           if (!e.isBundled)
@@ -723,15 +829,57 @@ class _LibrarySheet extends StatelessWidget {
               tooltip: 'Remove',
               onPressed: () => Navigator.pop(
                 context,
-                _LibraryAction(_LibraryActionKind.delete, e),
+                _LibraryAction(_LibraryActionKind.deleteCourse, courseEntry: e),
               ),
             ),
           FilledButton.tonal(
             onPressed: () => Navigator.pop(
               context,
-              _LibraryAction(_LibraryActionKind.load, e),
+              _LibraryAction(_LibraryActionKind.loadCourse, courseEntry: e),
             ),
             child: const Text('Load'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _raceRow(BuildContext context, RaceSessionEntry entry) {
+    return ListTile(
+      leading: const CircleAvatar(
+        child: Icon(Icons.route_outlined),
+      ),
+      title: Text(entry.title),
+      subtitle: Text('${entry.fileName} · ${entry.subtitle}'),
+      onTap: () => Navigator.pop(
+        context,
+        _LibraryAction(_LibraryActionKind.viewRace, raceEntry: entry),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.ios_share),
+            tooltip: 'Share GPX',
+            onPressed: () => Navigator.pop(
+              context,
+              _LibraryAction(_LibraryActionKind.shareRace, raceEntry: entry),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Remove',
+            onPressed: () => Navigator.pop(
+              context,
+              _LibraryAction(_LibraryActionKind.deleteRace, raceEntry: entry),
+            ),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.pop(
+              context,
+              _LibraryAction(_LibraryActionKind.viewRace, raceEntry: entry),
+            ),
+            child: const Text('View GPX'),
           ),
         ],
       ),
