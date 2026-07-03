@@ -67,7 +67,36 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Privacy'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Privacy Policy'), findsWidgets);
+    expect(find.text('Effective July 3, 2026'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Where data is stored'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Where data is stored'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
     expect(find.text('Privacy'), findsOneWidget);
     expect(find.text('Terms of Use'), findsOneWidget);
+
+    await tester.tap(find.text('Terms of Use'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Terms of Use'), findsWidgets);
+    expect(find.text('Safety and accuracy'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Disclaimer and limits'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Disclaimer and limits'), findsOneWidget);
   });
 }
