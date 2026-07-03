@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/course.dart';
+import '../services/location_service.dart';
 import '../services/position_source.dart';
 import '../utils/geo.dart';
 import '../widgets/course_map_painter.dart';
@@ -27,88 +28,27 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  static const _gpsSignalTimeout = Duration(seconds: 8);
-
-  late final PositionSource _source;
-  late final bool _ownsSource;
+  late final LocationService _locationService;
   final _mapTransformController = TransformationController();
-  StreamSubscription<Position>? _sub;
-  Timer? _gpsSignalTimer;
-  Position? _pos;
-  String? _error;
 
   @override
   void initState() {
     super.initState();
-    if (widget.positionSource != null) {
-      _source = widget.positionSource!;
-      _ownsSource = false;
-    } else {
-      _source = GeolocatorPositionSource();
-      _ownsSource = true;
-    }
-    _start();
+    _locationService = LocationService(positionSource: widget.positionSource);
+    _locationService.addListener(_handleLocationChanged);
+    unawaited(_locationService.start());
   }
 
-  Future<void> _start() async {
-    setState(() => _error = null);
-    final err = await _source.ensureReady();
+  void _handleLocationChanged() {
     if (!mounted) return;
-    if (err != null) {
-      setState(() => _error = err);
-      return;
-    }
-    _sub = _source.stream.listen(
-      (p) {
-        if (!mounted) return;
-        _gpsSignalTimer?.cancel();
-        setState(() => _pos = p);
-      },
-      onError: (error) {
-        if (!mounted || isTransientLocationStreamError(error)) return;
-        setState(() => _error = error.toString());
-      },
-    );
-    _armGpsSignalTimeout();
-    unawaited(_primeInitialFix());
-  }
-
-  Future<void> _primeInitialFix() async {
-    try {
-      final initial = await _source.getInitialPosition();
-      if (!mounted || initial == null || _pos != null) return;
-      _gpsSignalTimer?.cancel();
-      setState(() => _pos = initial);
-    } catch (_) {
-      // Best-effort only. The live stream remains the source of truth.
-    }
-  }
-
-  void _armGpsSignalTimeout() {
-    _gpsSignalTimer?.cancel();
-    _gpsSignalTimer = Timer(_gpsSignalTimeout, () {
-      if (!mounted || _pos != null || _error != null) return;
-      unawaited(_attemptStartupRecovery());
-    });
-  }
-
-  Future<void> _attemptStartupRecovery() async {
-    try {
-      final recovered = await _source.getRecoveryPosition();
-      if (!mounted || recovered == null || _pos != null) return;
-      _gpsSignalTimer?.cancel();
-      setState(() => _pos = recovered);
-    } catch (_) {
-      // Best-effort only. The stream remains the source of truth.
-    }
+    setState(() {});
   }
 
   @override
   void dispose() {
-    _sub?.cancel();
-    _gpsSignalTimer?.cancel();
+    _locationService.removeListener(_handleLocationChanged);
+    _locationService.dispose();
     _mapTransformController.dispose();
-    if (_ownsSource) _source.dispose();
     super.dispose();
   }
 
@@ -123,7 +63,8 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _buildMap() {
-    final fix = _pos;
+    final fix = _locationService.position;
+    final error = _locationService.error;
     final boat = fix != null ? LatLng(fix.latitude, fix.longitude) : null;
     return Stack(
       children: [
@@ -155,7 +96,7 @@ class _MapScreenState extends State<MapScreen> {
             left: 0,
             right: 0,
             child: Center(
-              child: _error == null ? _gpsChip() : _locationErrorChip(_error!),
+              child: error == null ? _gpsChip() : _locationErrorChip(error),
             ),
           ),
       ],
@@ -218,7 +159,7 @@ class _MapScreenState extends State<MapScreen> {
                 alignment: WrapAlignment.center,
                 children: [
                   TextButton(
-                    onPressed: _start,
+                    onPressed: () => unawaited(_locationService.start()),
                     child: const Text('Retry'),
                   ),
                   FilledButton(
