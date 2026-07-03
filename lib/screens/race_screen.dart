@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import '../models/course.dart';
 import '../services/app_analytics.dart';
 import '../services/course_library.dart';
+import '../services/location_service.dart';
 import '../services/position_source.dart';
 import '../services/race_session_store.dart';
 import '../utils/geo.dart';
@@ -34,19 +35,14 @@ class RaceScreen extends StatefulWidget {
 
 class _RaceScreenState extends State<RaceScreen> {
   static const _startOffsetOptions = <int>[0, 1, 5];
-  static const _gpsSignalTimeout = Duration(seconds: 8);
   static const _raceViewLabels = <String>['Overview', 'VMG', 'Heading'];
 
-  StreamSubscription<Position>? _sub;
   Timer? _raceClockTimer;
-  Timer? _gpsSignalTimer;
   late final PageController _raceViewController;
-  late final PositionSource _source;
-  late final bool _ownsSource;
+  late final LocationService _locationService;
   final _courseLibrary = CourseLibrary();
   final _sessionStore = RaceSessionStore();
-  Position? _pos;
-  String? _error;
+  String? _raceError;
   int _currentMark = 0;
   bool _autoAdvance = true;
   _RaceState _raceState = _RaceState.stopped;
@@ -60,23 +56,18 @@ class _RaceScreenState extends State<RaceScreen> {
   List<CourseEntry> _courseEntries = const [];
   bool _loadingCourses = true;
   bool? _lastReportedRecording;
-  bool _hasReceivedGpsFix = false;
-  bool _gpsRecoveryInFlight = false;
-  bool _showNoGpsSignal = false;
   int _raceViewIndex = 0;
+  int _lastProcessedFixVersion = 0;
+
+  String? get _displayError => _raceError ?? _locationService.error;
 
   @override
   void initState() {
     super.initState();
     _raceViewController = PageController();
     _selectedCourse = _copyCourse(widget.course);
-    if (widget.positionSource != null) {
-      _source = widget.positionSource!;
-      _ownsSource = false;
-    } else {
-      _source = GeolocatorPositionSource();
-      _ownsSource = true;
-    }
+    _locationService = LocationService(positionSource: widget.positionSource);
+    _locationService.addListener(_handleLocationServiceChanged);
     _reportRecordingChanged();
     unawaited(_loadCourseEntries());
   }
@@ -84,14 +75,27 @@ class _RaceScreenState extends State<RaceScreen> {
   @override
   void dispose() {
     _raceClockTimer?.cancel();
-    _gpsSignalTimer?.cancel();
     _raceViewController.dispose();
     if (_lastReportedRecording == true) {
       widget.onRecordingChanged?.call(false);
     }
-    _sub?.cancel();
-    if (_ownsSource) _source.dispose();
+    _locationService.removeListener(_handleLocationServiceChanged);
+    _locationService.dispose();
     super.dispose();
+  }
+
+  void _handleLocationServiceChanged() {
+    if (!mounted) return;
+    final fix = _locationService.position;
+    final hasNewFix =
+        fix != null && _locationService.fixVersion != _lastProcessedFixVersion;
+    if (hasNewFix &&
+        (_raceState == _RaceState.running || _raceState == _RaceState.paused)) {
+      _lastProcessedFixVersion = _locationService.fixVersion;
+      _processRaceFix(fix);
+      return;
+    }
+    setState(() {});
   }
 
   @override
@@ -124,9 +128,8 @@ class _RaceScreenState extends State<RaceScreen> {
       _selectedCourse = _copyCourse(course);
       _currentMark = 0;
       _finishMessage = null;
-      _error = null;
+      _raceError = null;
       _track.clear();
-      _pos = null;
     });
     widget.onCourseChanged?.call(_copyCourse(course));
   }
@@ -207,27 +210,20 @@ class _RaceScreenState extends State<RaceScreen> {
 
   Future<void> _startRace() async {
     try {
-      if (_sub != null) {
-        final oldSub = _sub;
-        _sub = null;
-        unawaited(oldSub?.cancel());
-      }
       if (!mounted) return;
       setState(() {
-        _error = null;
+        _raceError = null;
         _finishMessage = null;
         _raceStartedAt = DateTime.now().toUtc();
         _raceClockElapsed = Duration.zero;
         _currentMark = 0;
         _raceViewIndex = 0;
-        _pos = null;
         _track.clear();
         _finishingRace = false;
-        _hasReceivedGpsFix = false;
-        _showNoGpsSignal = false;
+        _lastProcessedFixVersion = 0;
       });
       _setRaceView(0);
-      final err = await _source.ensureReady();
+      final err = await _locationService.start();
       if (!mounted) return;
       if (err != null) {
         _handleLocationStartupError(err);
@@ -241,56 +237,28 @@ class _RaceScreenState extends State<RaceScreen> {
         markCount: _selectedCourse.buoys.length,
         startOffsetMinutes: _startOffsetMinutes,
       );
-      _sub = _source.stream.listen(
-        _onFix,
-        onError: (e) {
-          if (!mounted) return;
-          if (isTransientLocationStreamError(e)) return;
-          setState(() {
-            _error = e.toString();
-            _showNoGpsSignal = false;
-          });
-        },
-      );
-      unawaited(_primeInitialGpsFix());
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _raceError = e.toString();
         _raceState = _RaceState.stopped;
         _raceStartedAt = null;
         _raceClockElapsed = Duration.zero;
       });
       _stopRaceClock();
-      _gpsSignalTimer?.cancel();
+      unawaited(_locationService.stop(clearPosition: true));
       _reportRecordingChanged();
-    }
-  }
-
-  Future<void> _primeInitialGpsFix() async {
-    try {
-      final initial = await _source.getInitialPosition();
-      if (!mounted || initial == null) return;
-      if (_raceState != _RaceState.running && _raceState != _RaceState.paused) {
-        return;
-      }
-      if (_hasReceivedGpsFix) return;
-      _onFix(initial);
-    } catch (_) {
-      // Best-effort only. The live stream remains the source of truth.
     }
   }
 
   void _handleLocationStartupError(String error) {
     setState(() {
-      _error = error;
-      _showNoGpsSignal = false;
+      _raceError = null;
       _raceState = _RaceState.stopped;
       _raceStartedAt = null;
       _raceClockElapsed = Duration.zero;
     });
     _stopRaceClock();
-    _gpsSignalTimer?.cancel();
     _reportRecordingChanged();
     if (isLocationServicesDisabledError(error) ||
         isLocationPermissionError(error)) {
@@ -299,27 +267,24 @@ class _RaceScreenState extends State<RaceScreen> {
   }
 
   void _pauseRace() {
-    if (_sub == null) return;
-    _sub!.pause();
-    _gpsSignalTimer?.cancel();
+    if (_raceState != _RaceState.running) return;
+    _locationService.pause();
     if (!mounted) return;
     setState(() {
-      _error = null;
+      _raceError = null;
       _raceState = _RaceState.paused;
-      _showNoGpsSignal = false;
     });
     _reportRecordingChanged();
   }
 
   void _resumeRace() {
-    if (_sub == null) return;
-    _sub!.resume();
+    if (_raceState != _RaceState.paused) return;
+    _locationService.resume();
     if (!mounted) return;
     setState(() {
-      _error = null;
+      _raceError = null;
       _raceState = _RaceState.running;
     });
-    _armGpsSignalTimeout();
     _reportRecordingChanged();
   }
 
@@ -429,24 +394,21 @@ class _RaceScreenState extends State<RaceScreen> {
       track: List<RaceTrackPoint>.unmodifiable(_track),
     );
 
-    _sub?.pause();
+    _locationService.pause();
     if (mounted) {
       setState(() {
         _raceState = _RaceState.finished;
-        _error = null;
+        _raceError = null;
         _finishMessage = finishMessage;
         _raceClockElapsed = finishedAt.difference(_raceStartedAt!);
-        _showNoGpsSignal = false;
       });
       _reportRecordingChanged();
     }
 
     _stopRaceClock();
-    _gpsSignalTimer?.cancel();
-    await _sub?.cancel();
-    _sub = null;
     try {
       await _sessionStore.saveCompleted(record);
+      await _locationService.stop(clearError: true);
       AppAnalytics.instance.logRaceFinished(
         totalMarks: _selectedCourse.buoys.length,
         finalMarkIndex: _currentMark,
@@ -462,8 +424,9 @@ class _RaceScreenState extends State<RaceScreen> {
       if (!mounted) return;
       setState(() {
         _raceState = _RaceState.paused;
-        _error = 'Could not save race data: $e';
+        _raceError = 'Could not save race data: $e';
       });
+      _locationService.resume();
       _startRaceClock();
       _reportRecordingChanged();
       _finishingRace = false;
@@ -487,14 +450,11 @@ class _RaceScreenState extends State<RaceScreen> {
     return 'Race saved. $summary over $durationText. GPX added to library.';
   }
 
-  void _onFix(Position p) {
+  void _processRaceFix(Position p) {
     final point = RaceTrackPoint.fromPosition(p);
     var reachedFinish = false;
-    _armGpsSignalTimeout();
     setState(() {
-      _pos = p;
-      _hasReceivedGpsFix = true;
-      _showNoGpsSignal = false;
+      _raceError = null;
       _track.add(point);
       if (_autoAdvance && _currentMark < _selectedCourse.buoys.length) {
         final mark = _selectedCourse.buoys[_currentMark];
@@ -513,42 +473,6 @@ class _RaceScreenState extends State<RaceScreen> {
     });
     if (reachedFinish) {
       unawaited(_finishRace(completedCourse: true));
-    }
-  }
-
-  void _armGpsSignalTimeout() {
-    _gpsSignalTimer?.cancel();
-    _gpsSignalTimer = Timer(_gpsSignalTimeout, () {
-      if (!mounted) return;
-      if (_raceState != _RaceState.running && _raceState != _RaceState.paused) {
-        return;
-      }
-      if (_error != null) return;
-      unawaited(_attemptGpsRecoveryAfterTimeout());
-    });
-  }
-
-  Future<void> _attemptGpsRecoveryAfterTimeout() async {
-    if (_gpsRecoveryInFlight) return;
-    _gpsRecoveryInFlight = true;
-    try {
-      final sampled = await _source.getRecoveryPosition();
-      if (!mounted) return;
-      if (_raceState != _RaceState.running && _raceState != _RaceState.paused) {
-        return;
-      }
-      if (_error != null) return;
-      if (sampled != null) {
-        _onFix(sampled);
-        return;
-      }
-      if (_hasReceivedGpsFix) {
-        setState(() => _showNoGpsSignal = true);
-      } else {
-        _armGpsSignalTimeout();
-      }
-    } finally {
-      _gpsRecoveryInFlight = false;
     }
   }
 
