@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/course.dart';
@@ -86,16 +85,22 @@ class _RaceScreenState extends State<RaceScreen> {
 
   void _handleLocationServiceChanged() {
     if (!mounted) return;
-    final fix = _locationService.position;
-    final hasNewFix =
-        fix != null && _locationService.fixVersion != _lastProcessedFixVersion;
-    if (hasNewFix &&
-        (_raceState == _RaceState.running || _raceState == _RaceState.paused)) {
-      _lastProcessedFixVersion = _locationService.fixVersion;
-      _processRaceFix(fix);
+    if (_consumePendingLocationFix()) {
       return;
     }
     setState(() {});
+  }
+
+  bool _consumePendingLocationFix() {
+    final fix = _locationService.position;
+    if (fix == null) return false;
+    if (_locationService.fixVersion == _lastProcessedFixVersion) return false;
+    if (_raceState != _RaceState.running && _raceState != _RaceState.paused) {
+      return false;
+    }
+    _lastProcessedFixVersion = _locationService.fixVersion;
+    _processRaceFix(fix);
+    return true;
   }
 
   @override
@@ -230,8 +235,8 @@ class _RaceScreenState extends State<RaceScreen> {
         return;
       }
       setState(() => _raceState = _RaceState.running);
+      _consumePendingLocationFix();
       _startRaceClock();
-      _armGpsSignalTimeout();
       _reportRecordingChanged();
       AppAnalytics.instance.logRaceStarted(
         markCount: _selectedCourse.buoys.length,
@@ -426,7 +431,6 @@ class _RaceScreenState extends State<RaceScreen> {
         _raceState = _RaceState.paused;
         _raceError = 'Could not save race data: $e';
       });
-      _locationService.resume();
       _startRaceClock();
       _reportRecordingChanged();
       _finishingRace = false;
@@ -499,7 +503,7 @@ class _RaceScreenState extends State<RaceScreen> {
     }
 
     final mark = buoys[_currentMark];
-    final fix = _pos;
+    final fix = _locationService.position;
     final here = fix == null ? null : LatLng(fix.latitude, fix.longitude);
 
     final distance = here == null ? null : distanceMeters(here, mark.position);
@@ -622,7 +626,7 @@ class _RaceScreenState extends State<RaceScreen> {
   }
 
   Widget _buildGpsStatusBanner(BuildContext context) {
-    if (_showNoGpsSignal) {
+    if (_locationService.showNoSignal) {
       return ColoredBox(
         color: Colors.orange.shade700,
         child: const SizedBox(
@@ -648,7 +652,7 @@ class _RaceScreenState extends State<RaceScreen> {
       );
     }
 
-    if (_error != null || _hasReceivedGpsFix) {
+    if (_displayError != null || _locationService.hasReceivedFix) {
       return const SizedBox.shrink();
     }
 
@@ -785,9 +789,9 @@ class _RaceScreenState extends State<RaceScreen> {
         _launcherCard(mark: mark),
         const SizedBox(height: 16),
         _coursePreviewCard(fix),
-        if (_error != null) ...[
+        if (_displayError != null) ...[
           const SizedBox(height: 16),
-          _errorCard(_error!),
+          _errorCard(_displayError!),
         ],
       ],
     );
@@ -820,7 +824,7 @@ class _RaceScreenState extends State<RaceScreen> {
             DropdownButtonFormField<String>(
               key: const Key('race-course-picker'),
               isExpanded: true,
-              value: options.any((option) => option.key == selectedKey)
+              initialValue: options.any((option) => option.key == selectedKey)
                   ? selectedKey
                   : null,
               decoration: const InputDecoration(
@@ -1057,8 +1061,8 @@ class _RaceScreenState extends State<RaceScreen> {
                   children: [
                     _markHeader(mark),
                     const SizedBox(height: 16),
-                    if (_error != null)
-                      _errorCard(_error!)
+                    if (_displayError != null)
+                      _errorCard(_displayError!)
                     else if (fix == null)
                       const _Waiting()
                     else ...[
@@ -1190,8 +1194,8 @@ class _RaceScreenState extends State<RaceScreen> {
                     ? const SizedBox.shrink()
                     : _raceState == _RaceState.finished
                         ? const SizedBox.shrink()
-                        : _error != null
-                            ? _errorCard(_error!)
+                        : _displayError != null
+                            ? _errorCard(_displayError!)
                             : fix == null
                                 ? const _Waiting()
                                 : _bigMetric(
@@ -1211,7 +1215,7 @@ class _RaceScreenState extends State<RaceScreen> {
               padding: const EdgeInsets.fromLTRB(6, 12, 12, 12),
               child: (_raceState == _RaceState.stopped ||
                       _raceState == _RaceState.finished ||
-                      _error != null ||
+                      _displayError != null ||
                       fix == null)
                   ? const SizedBox.shrink()
                   : SingleChildScrollView(
@@ -1316,8 +1320,8 @@ class _RaceScreenState extends State<RaceScreen> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 16),
-                    if (_error != null)
-                      _errorCard(_error!)
+                    if (_displayError != null)
+                      _errorCard(_displayError!)
                     else if (fix == null)
                       const _Waiting()
                     else
@@ -1366,8 +1370,8 @@ class _RaceScreenState extends State<RaceScreen> {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
-                    if (_error != null)
-                      _errorCard(_error!)
+                    if (_displayError != null)
+                      _errorCard(_displayError!)
                     else if (fix == null)
                       const _Waiting()
                     else ...[
