@@ -197,18 +197,7 @@ class _RaceScreenState extends State<RaceScreen> {
       final err = await _source.ensureReady();
       if (!mounted) return;
       if (err != null) {
-        if (err == 'Location services are disabled.') {
-          _showLocationDisabledDialog();
-        } else {
-          setState(() {
-            _error = err;
-            _raceState = _RaceState.stopped;
-            _raceStartedAt = null;
-            _raceClockElapsed = Duration.zero;
-          });
-          _stopRaceClock();
-          _reportRecordingChanged();
-        }
+        _handleLocationStartupError(err);
         return;
       }
       setState(() => _raceState = _RaceState.running);
@@ -238,6 +227,21 @@ class _RaceScreenState extends State<RaceScreen> {
     }
   }
 
+  void _handleLocationStartupError(String error) {
+    setState(() {
+      _error = error;
+      _raceState = _RaceState.stopped;
+      _raceStartedAt = null;
+      _raceClockElapsed = Duration.zero;
+    });
+    _stopRaceClock();
+    _reportRecordingChanged();
+    if (isLocationServicesDisabledError(error) ||
+        isLocationPermissionError(error)) {
+      _showLocationErrorDialog(error);
+    }
+  }
+
   void _pauseRace() {
     if (_sub == null) return;
     _sub!.pause();
@@ -260,14 +264,19 @@ class _RaceScreenState extends State<RaceScreen> {
     _reportRecordingChanged();
   }
 
-  void _showLocationDisabledDialog() {
+  void _showLocationErrorDialog(String error) {
     if (!mounted) return;
+    final actionLabel = isLocationServicesDisabledError(error)
+        ? 'Open Location Services'
+        : 'Open Settings';
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Location Service Disabled'),
-        content: const Text(
-          'You must open Settings and enable Location Services to record the race.',
+        title: const Text('Location Access Needed'),
+        content: Text(
+          isLocationServicesDisabledError(error)
+              ? 'Turn on Location Services to start recording the race.'
+              : 'Allow Race Mate to access your location so it can record the race.',
         ),
         actions: [
           TextButton(
@@ -275,15 +284,25 @@ class _RaceScreenState extends State<RaceScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              unawaited(Geolocator.openLocationSettings());
+              await _openSettingsForLocationError(error);
             },
-            child: const Text('Open Settings'),
+            child: Text(actionLabel),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _openSettingsForLocationError(String error) async {
+    if (isLocationServicesDisabledError(error)) {
+      await Geolocator.openLocationSettings();
+      return;
+    }
+    if (isLocationPermissionError(error)) {
+      await Geolocator.openAppSettings();
+    }
   }
 
   Future<void> _confirmAndFinishRace() async {
@@ -1235,20 +1254,33 @@ class _RaceScreenState extends State<RaceScreen> {
     );
   }
 
-  Widget _errorCard(String msg) => Card(
-        color: Colors.red.shade50,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const Icon(Icons.error_outline, color: Colors.red),
-              const SizedBox(width: 12),
-              Expanded(child: Text(msg)),
-              TextButton(onPressed: _startRace, child: const Text('Retry')),
-            ],
-          ),
+  Widget _errorCard(String msg) {
+    final showSettingsAction =
+        isLocationServicesDisabledError(msg) || isLocationPermissionError(msg);
+    final settingsLabel = isLocationServicesDisabledError(msg)
+        ? 'Open Location Services'
+        : 'Open Settings';
+
+    return Card(
+      color: Colors.red.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red),
+            const SizedBox(width: 12),
+            Expanded(child: Text(msg)),
+            if (showSettingsAction)
+              TextButton(
+                onPressed: () => _openSettingsForLocationError(msg),
+                child: Text(settingsLabel),
+              ),
+            TextButton(onPressed: _startRace, child: const Text('Retry')),
+          ],
         ),
-      );
+      ),
+    );
+  }
 }
 
 class _Waiting extends StatelessWidget {

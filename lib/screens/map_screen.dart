@@ -31,6 +31,7 @@ class _MapScreenState extends State<MapScreen> {
   late final bool _ownsSource;
   StreamSubscription<Position>? _sub;
   Position? _pos;
+  String? _error;
 
   @override
   void initState() {
@@ -46,9 +47,13 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _start() async {
+    setState(() => _error = null);
     final err = await _source.ensureReady();
     if (!mounted) return;
-    if (err != null) return; // no GPS — show static course
+    if (err != null) {
+      setState(() => _error = err);
+      return;
+    }
     _sub = _source.stream.listen((p) {
       if (mounted) setState(() => _pos = p);
     });
@@ -91,7 +96,9 @@ class _MapScreenState extends State<MapScreen> {
             top: 12,
             left: 0,
             right: 0,
-            child: Center(child: _gpsChip()),
+            child: Center(
+              child: _error == null ? _gpsChip() : _locationErrorChip(_error!),
+            ),
           ),
       ],
     );
@@ -116,5 +123,66 @@ class _MapScreenState extends State<MapScreen> {
         ],
       ),
     );
+  }
+
+  Widget _locationErrorChip(String error) {
+    final actionLabel = isLocationServicesDisabledError(error)
+        ? 'Open Location Services'
+        : isLocationPermissionError(error)
+            ? 'Open Settings'
+            : 'Retry';
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 420),
+      child: Card(
+        color: Colors.red.shade50,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.location_off, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      error,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: _start,
+                    child: const Text('Retry'),
+                  ),
+                  FilledButton(
+                    onPressed: () => _openSettingsForError(error),
+                    child: Text(actionLabel),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openSettingsForError(String error) async {
+    if (isLocationServicesDisabledError(error)) {
+      await Geolocator.openLocationSettings();
+      return;
+    }
+    if (isLocationPermissionError(error)) {
+      await Geolocator.openAppSettings();
+    }
   }
 }

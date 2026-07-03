@@ -1,6 +1,19 @@
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 
+const locationServicesDisabledMessage = 'Location services are disabled.';
+const locationPermissionDeniedMessage =
+    'Location permission denied. Enable location access for Race Mate in Settings.';
+const locationPermissionDeniedForeverMessage =
+    'Location permission denied forever. Enable location access for Race Mate in Settings.';
+
+bool isLocationServicesDisabledError(String error) =>
+    error == locationServicesDisabledMessage;
+
+bool isLocationPermissionError(String error) =>
+    error == locationPermissionDeniedMessage ||
+    error == locationPermissionDeniedForeverMessage;
+
 /// Abstraction over "where do position fixes come from" so the production app
 /// can use real GPS and the dev simulator can inject a fake stream.
 abstract class PositionSource {
@@ -22,14 +35,16 @@ class GeolocatorPositionSource implements PositionSource {
   @override
   Future<String?> ensureReady() async {
     final enabled = await Geolocator.isLocationServiceEnabled();
-    if (!enabled) return 'Location services are disabled.';
+    if (!enabled) return locationServicesDisabledMessage;
     var perm = await Geolocator.checkPermission();
     if (perm == LocationPermission.denied) {
       perm = await Geolocator.requestPermission();
     }
-    if (perm == LocationPermission.denied ||
-        perm == LocationPermission.deniedForever) {
-      return 'Location permission denied.';
+    if (perm == LocationPermission.denied) {
+      return locationPermissionDeniedMessage;
+    }
+    if (perm == LocationPermission.deniedForever) {
+      return locationPermissionDeniedForeverMessage;
     }
     return null;
   }
