@@ -1,131 +1,484 @@
 {
-  "source": "CCYC Course Diagrams 2026",
-  "marks": [
+  "format": "sail-race-course",
+  "version": 2,
+  "name": "CCYC Race Courses 2026",
+  "createdAt": "2026-07-03T00:00:00Z",
+  "organizingAuthority": {
+    "name": "Corinthian Yacht Club of Chicago",
+    "shortName": "CCYC",
+    "city": "Chicago",
+    "state": "Illinois",
+    "country": "USA"
+  },
+  "units": {
+    "distance": "nm",
+    "roundingRadius": "m",
+    "heading": "degrees_true"
+  },
+  "buoys": [
     {
       "id": "CENTER",
       "name": "Center",
       "description": "Center of Corinthian Course, Orange Pole",
-      "latitude": 41.976039,
-      "longitude": -87.610111
+      "lat": 41.976039,
+      "lng": -87.610111,
+      "roundingRadiusM": 25
     },
     {
       "id": "N",
-      "bearingFromCenter": 0,
-      "distanceNmFromCenter": 0.75,
+      "name": "North Mark",
       "description": "360 T, 0.75 NM from Center Mark, White Pole",
-      "latitude": 41.980136,
-      "longitude": -87.610111
+      "lat": 41.980136,
+      "lng": -87.610111,
+      "roundingRadiusM": 25
     },
     {
       "id": "NE",
-      "bearingFromCenter": 45,
-      "distanceNmFromCenter": 0.75,
+      "name": "Northeast Mark",
       "description": "045 T, 0.75 NM from Center Mark, White Pole",
-      "latitude": 41.980075,
-      "longitude": -87.599136
+      "lat": 41.980075,
+      "lng": -87.599136,
+      "roundingRadiusM": 25
     },
     {
       "id": "E",
-      "bearingFromCenter": 90,
-      "distanceNmFromCenter": 0.75,
+      "name": "East Mark",
       "description": "090 T, 0.75 NM from Center Mark, White Pole",
-      "latitude": 41.976039,
-      "longitude": -87.593333
+      "lat": 41.976039,
+      "lng": -87.593333,
+      "roundingRadiusM": 25
     },
     {
       "id": "SE",
-      "bearingFromCenter": 135,
-      "distanceNmFromCenter": 0.75,
+      "name": "Southeast Mark",
       "description": "135 T, 0.75 NM from Center Mark, White Pole",
-      "latitude": 41.975614,
-      "longitude": -87.599136
+      "lat": 41.975614,
+      "lng": -87.599136,
+      "roundingRadiusM": 25
     },
     {
       "id": "S",
-      "bearingFromCenter": 180,
-      "distanceNmFromCenter": 0.75,
+      "name": "South Mark",
       "description": "180 T, 0.75 NM from Center Mark, White Pole",
-      "latitude": 41.976914,
-      "longitude": -87.610111
+      "lat": 41.976914,
+      "lng": -87.610111,
+      "roundingRadiusM": 25
     },
     {
       "id": "SW",
-      "bearingFromCenter": 225,
-      "distanceNmFromCenter": 0.75,
+      "name": "Southwest Mark",
       "description": "225 T, 0.75 NM from Center Mark, White Pole",
-      "latitude": 41.975614,
-      "longitude": -87.619750
+      "lat": 41.975614,
+      "lng": -87.619750,
+      "roundingRadiusM": 25
     },
     {
       "id": "W",
-      "bearingFromCenter": 270,
-      "distanceNmFromCenter": 0.75,
+      "name": "West Mark",
       "description": "270 T, 0.75 NM from Center Mark, White Pole",
-      "latitude": 41.976039,
-      "longitude": -87.619444
+      "lat": 41.976039,
+      "lng": -87.619444,
+      "roundingRadiusM": 25
     },
     {
       "id": "NW",
-      "bearingFromCenter": 315,
-      "distanceNmFromCenter": 0.75,
+      "name": "Northwest Mark",
       "description": "315 T, 0.75 NM from Center Mark, White Pole",
-      "latitude": 41.980075,
-      "longitude": -87.619750
+      "lat": 41.980075,
+      "lng": -87.619750,
+      "roundingRadiusM": 25
     }
   ],
   "courses": [
     {
-      "id": "A",
-      "name": "Course A",
+      "id": "A-N",
+      "name": "Course A (N)",
       "type": "JAM typical course",
-      "variants": [
-        { "firstMark": "N", "legHeadings": [0, 225, 135, 0], "marks": ["CENTER", "N", "W", "S", "N"] },
-        { "firstMark": "NE", "legHeadings": [45, 270, 180, 45], "marks": ["CENTER", "NE", "NW", "SW", "NE"] },
-        { "firstMark": "E", "legHeadings": [90, 315, 225, 90], "marks": ["CENTER", "E", "N", "W", "E"] },
-        { "firstMark": "SE", "legHeadings": [135, 0, 270, 135], "marks": ["CENTER", "SE", "NE", "NW", "SE"] },
-        { "firstMark": "S", "legHeadings": [180, 45, 315, 180], "marks": ["CENTER", "S", "E", "N", "S"] },
-        { "firstMark": "SW", "legHeadings": [225, 90, 0, 225], "marks": ["CENTER", "SW", "SE", "NE", "SW"] },
-        { "firstMark": "W", "legHeadings": [270, null, null, 270], "marks": ["CENTER", "W"], "note": "PDF table shows xxx for legs 2 and 3." },
-        { "firstMark": "NW", "legHeadings": [315, 180, 90, 315], "marks": ["CENTER", "NW", "SW", "SE", "NW"] }
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 0 },
+        { "buoyId": "N", "role": "round", "rounding": "PORT", "headingToNext": 225 },
+        { "buoyId": "W", "role": "round", "rounding": "PORT", "headingToNext": 135 },
+        { "buoyId": "S", "role": "round", "rounding": "PORT", "headingToNext": 0 },
+        { "buoyId": "N", "role": "finish" }
       ]
     },
     {
-      "id": "B",
-      "name": "Course B",
+      "id": "A-NE",
+      "name": "Course A (NE)",
+      "type": "JAM typical course",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 45 },
+        { "buoyId": "NE", "role": "round", "rounding": "PORT", "headingToNext": 270 },
+        { "buoyId": "NW", "role": "round", "rounding": "PORT", "headingToNext": 180 },
+        { "buoyId": "SW", "role": "round", "rounding": "PORT", "headingToNext": 45 },
+        { "buoyId": "NE", "role": "finish" }
+      ]
+    },
+    {
+      "id": "A-E",
+      "name": "Course A (E)",
+      "type": "JAM typical course",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 90 },
+        { "buoyId": "E", "role": "round", "rounding": "PORT", "headingToNext": 315 },
+        { "buoyId": "N", "role": "round", "rounding": "PORT", "headingToNext": 225 },
+        { "buoyId": "W", "role": "round", "rounding": "PORT", "headingToNext": 90 },
+        { "buoyId": "E", "role": "finish" }
+      ]
+    },
+    {
+      "id": "A-SE",
+      "name": "Course A (SE)",
+      "type": "JAM typical course",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 135 },
+        { "buoyId": "SE", "role": "round", "rounding": "PORT", "headingToNext": 0 },
+        { "buoyId": "NE", "role": "round", "rounding": "PORT", "headingToNext": 270 },
+        { "buoyId": "NW", "role": "round", "rounding": "PORT", "headingToNext": 135 },
+        { "buoyId": "SE", "role": "finish" }
+      ]
+    },
+    {
+      "id": "A-S",
+      "name": "Course A (S)",
+      "type": "JAM typical course",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 180 },
+        { "buoyId": "S", "role": "round", "rounding": "PORT", "headingToNext": 45 },
+        { "buoyId": "E", "role": "round", "rounding": "PORT", "headingToNext": 315 },
+        { "buoyId": "N", "role": "round", "rounding": "PORT", "headingToNext": 180 },
+        { "buoyId": "S", "role": "finish" }
+      ]
+    },
+    {
+      "id": "A-SW",
+      "name": "Course A (SW)",
+      "type": "JAM typical course",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 225 },
+        { "buoyId": "SW", "role": "round", "rounding": "PORT", "headingToNext": 90 },
+        { "buoyId": "SE", "role": "round", "rounding": "PORT", "headingToNext": 0 },
+        { "buoyId": "NE", "role": "round", "rounding": "PORT", "headingToNext": 225 },
+        { "buoyId": "SW", "role": "finish" }
+      ]
+    },
+    {
+      "id": "A-W",
+      "name": "Course A (W)",
+      "type": "JAM typical course",
+      "note": "Legs 2 and 3 not published in source PDF.",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 270 },
+        { "buoyId": "W", "role": "finish" }
+      ]
+    },
+    {
+      "id": "A-NW",
+      "name": "Course A (NW)",
+      "type": "JAM typical course",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 315 },
+        { "buoyId": "NW", "role": "round", "rounding": "PORT", "headingToNext": 180 },
+        { "buoyId": "SW", "role": "round", "rounding": "PORT", "headingToNext": 90 },
+        { "buoyId": "SE", "role": "round", "rounding": "PORT", "headingToNext": 315 },
+        { "buoyId": "NW", "role": "finish" }
+      ]
+    },
+    {
+      "id": "B-N",
+      "name": "Course B (N)",
       "type": "Windward-leeward",
-      "note": "Diagram shows a straight windward-leeward course between opposite marks.",
-      "variants": [
-        { "firstMark": "N", "marks": ["CENTER", "N", "S", "N"] },
-        { "firstMark": "NE", "marks": ["CENTER", "NE", "SW", "NE"] },
-        { "firstMark": "E", "marks": ["CENTER", "E", "W", "E"] },
-        { "firstMark": "SE", "marks": ["CENTER", "SE", "NW", "SE"] },
-        { "firstMark": "S", "marks": ["CENTER", "S", "N", "S"] },
-        { "firstMark": "SW", "marks": ["CENTER", "SW", "NE", "SW"] },
-        { "firstMark": "W", "marks": ["CENTER", "W", "E", "W"] },
-        { "firstMark": "NW", "marks": ["CENTER", "NW", "SE", "NW"] }
+      "turns": [
+        { "buoyId": "CENTER", "role": "start" },
+        { "buoyId": "N", "role": "round", "rounding": "PORT" },
+        { "buoyId": "S", "role": "round", "rounding": "PORT" },
+        { "buoyId": "N", "role": "finish" }
       ]
     },
     {
-      "id": "C",
-      "name": "Course C",
-      "type": "Modified Olympic trapezoid",
-      "variants": [
-        { "firstMark": "N", "legHeadings": [0, 247, 180, 113, 0], "marks": ["CENTER", "N", "NW", "SW", "S", "N"] },
-        { "firstMark": "NE", "legHeadings": [45, 292, 225, 158, 45], "marks": ["CENTER", "NE", "N", "W", "SW", "NE"] },
-        { "firstMark": "E", "legHeadings": [90, 337, 270, 203, 90], "marks": ["CENTER", "E", "NE", "NW", "W", "E"] },
-        { "firstMark": "SE", "legHeadings": [135, 22, 315, 248, 135], "marks": ["CENTER", "SE", "E", "N", "NW", "SE"] },
-        { "firstMark": "S", "legHeadings": [180, 67, 0, 293, 180], "marks": ["CENTER", "S", "SE", "NE", "N", "S"] },
-        { "firstMark": "SW", "legHeadings": [225, 112, 45, 338, 225], "marks": ["CENTER", "SW", "S", "E", "NE", "SW"] },
-        { "firstMark": "W", "legHeadings": [270, 157, 90, 23, 270], "marks": ["CENTER", "W", "SW", "SE", "E", "W"] },
-        { "firstMark": "NW", "legHeadings": [315, 202, 135, 68, 315], "marks": ["CENTER", "NW", "W", "S", "SE", "NW"] }
+      "id": "B-NE",
+      "name": "Course B (NE)",
+      "type": "Windward-leeward",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start" },
+        { "buoyId": "NE", "role": "round", "rounding": "PORT" },
+        { "buoyId": "SW", "role": "round", "rounding": "PORT" },
+        { "buoyId": "NE", "role": "finish" }
       ]
     },
     {
-      "id": "D",
-      "name": "Course D",
+      "id": "B-E",
+      "name": "Course B (E)",
+      "type": "Windward-leeward",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start" },
+        { "buoyId": "E", "role": "round", "rounding": "PORT" },
+        { "buoyId": "W", "role": "round", "rounding": "PORT" },
+        { "buoyId": "E", "role": "finish" }
+      ]
+    },
+    {
+      "id": "B-SE",
+      "name": "Course B (SE)",
+      "type": "Windward-leeward",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start" },
+        { "buoyId": "SE", "role": "round", "rounding": "PORT" },
+        { "buoyId": "NW", "role": "round", "rounding": "PORT" },
+        { "buoyId": "SE", "role": "finish" }
+      ]
+    },
+    {
+      "id": "B-S",
+      "name": "Course B (S)",
+      "type": "Windward-leeward",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start" },
+        { "buoyId": "S", "role": "round", "rounding": "PORT" },
+        { "buoyId": "N", "role": "round", "rounding": "PORT" },
+        { "buoyId": "S", "role": "finish" }
+      ]
+    },
+    {
+      "id": "B-SW",
+      "name": "Course B (SW)",
+      "type": "Windward-leeward",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start" },
+        { "buoyId": "SW", "role": "round", "rounding": "PORT" },
+        { "buoyId": "NE", "role": "round", "rounding": "PORT" },
+        { "buoyId": "SW", "role": "finish" }
+      ]
+    },
+    {
+      "id": "B-W",
+      "name": "Course B (W)",
+      "type": "Windward-leeward",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start" },
+        { "buoyId": "W", "role": "round", "rounding": "PORT" },
+        { "buoyId": "E", "role": "round", "rounding": "PORT" },
+        { "buoyId": "W", "role": "finish" }
+      ]
+    },
+    {
+      "id": "B-NW",
+      "name": "Course B (NW)",
+      "type": "Windward-leeward",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start" },
+        { "buoyId": "NW", "role": "round", "rounding": "PORT" },
+        { "buoyId": "SE", "role": "round", "rounding": "PORT" },
+        { "buoyId": "NW", "role": "finish" }
+      ]
+    },
+    {
+      "id": "C-N",
+      "name": "Course C (N)",
       "type": "Modified Olympic trapezoid",
-      "note": "PDF gives Course C/D the same heading table.",
-      "variantsReference": "C"
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 0 },
+        { "buoyId": "N", "role": "round", "rounding": "PORT", "headingToNext": 247 },
+        { "buoyId": "NW", "role": "round", "rounding": "PORT", "headingToNext": 180 },
+        { "buoyId": "SW", "role": "round", "rounding": "PORT", "headingToNext": 113 },
+        { "buoyId": "S", "role": "round", "rounding": "PORT", "headingToNext": 0 },
+        { "buoyId": "N", "role": "finish" }
+      ]
+    },
+    {
+      "id": "C-NE",
+      "name": "Course C (NE)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 45 },
+        { "buoyId": "NE", "role": "round", "rounding": "PORT", "headingToNext": 292 },
+        { "buoyId": "N", "role": "round", "rounding": "PORT", "headingToNext": 225 },
+        { "buoyId": "W", "role": "round", "rounding": "PORT", "headingToNext": 158 },
+        { "buoyId": "SW", "role": "round", "rounding": "PORT", "headingToNext": 45 },
+        { "buoyId": "NE", "role": "finish" }
+      ]
+    },
+    {
+      "id": "C-E",
+      "name": "Course C (E)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 90 },
+        { "buoyId": "E", "role": "round", "rounding": "PORT", "headingToNext": 337 },
+        { "buoyId": "NE", "role": "round", "rounding": "PORT", "headingToNext": 270 },
+        { "buoyId": "NW", "role": "round", "rounding": "PORT", "headingToNext": 203 },
+        { "buoyId": "W", "role": "round", "rounding": "PORT", "headingToNext": 90 },
+        { "buoyId": "E", "role": "finish" }
+      ]
+    },
+    {
+      "id": "C-SE",
+      "name": "Course C (SE)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 135 },
+        { "buoyId": "SE", "role": "round", "rounding": "PORT", "headingToNext": 22 },
+        { "buoyId": "E", "role": "round", "rounding": "PORT", "headingToNext": 315 },
+        { "buoyId": "N", "role": "round", "rounding": "PORT", "headingToNext": 248 },
+        { "buoyId": "NW", "role": "round", "rounding": "PORT", "headingToNext": 135 },
+        { "buoyId": "SE", "role": "finish" }
+      ]
+    },
+    {
+      "id": "C-S",
+      "name": "Course C (S)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 180 },
+        { "buoyId": "S", "role": "round", "rounding": "PORT", "headingToNext": 67 },
+        { "buoyId": "SE", "role": "round", "rounding": "PORT", "headingToNext": 0 },
+        { "buoyId": "NE", "role": "round", "rounding": "PORT", "headingToNext": 293 },
+        { "buoyId": "N", "role": "round", "rounding": "PORT", "headingToNext": 180 },
+        { "buoyId": "S", "role": "finish" }
+      ]
+    },
+    {
+      "id": "C-SW",
+      "name": "Course C (SW)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 225 },
+        { "buoyId": "SW", "role": "round", "rounding": "PORT", "headingToNext": 112 },
+        { "buoyId": "S", "role": "round", "rounding": "PORT", "headingToNext": 45 },
+        { "buoyId": "E", "role": "round", "rounding": "PORT", "headingToNext": 338 },
+        { "buoyId": "NE", "role": "round", "rounding": "PORT", "headingToNext": 225 },
+        { "buoyId": "SW", "role": "finish" }
+      ]
+    },
+    {
+      "id": "C-W",
+      "name": "Course C (W)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 270 },
+        { "buoyId": "W", "role": "round", "rounding": "PORT", "headingToNext": 157 },
+        { "buoyId": "SW", "role": "round", "rounding": "PORT", "headingToNext": 90 },
+        { "buoyId": "SE", "role": "round", "rounding": "PORT", "headingToNext": 23 },
+        { "buoyId": "E", "role": "round", "rounding": "PORT", "headingToNext": 270 },
+        { "buoyId": "W", "role": "finish" }
+      ]
+    },
+    {
+      "id": "C-NW",
+      "name": "Course C (NW)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 315 },
+        { "buoyId": "NW", "role": "round", "rounding": "PORT", "headingToNext": 202 },
+        { "buoyId": "W", "role": "round", "rounding": "PORT", "headingToNext": 135 },
+        { "buoyId": "S", "role": "round", "rounding": "PORT", "headingToNext": 68 },
+        { "buoyId": "SE", "role": "round", "rounding": "PORT", "headingToNext": 315 },
+        { "buoyId": "NW", "role": "finish" }
+      ]
+    },
+    {
+      "id": "D-N",
+      "name": "Course D (N)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 0 },
+        { "buoyId": "N", "role": "round", "rounding": "PORT", "headingToNext": 247 },
+        { "buoyId": "NW", "role": "round", "rounding": "PORT", "headingToNext": 180 },
+        { "buoyId": "SW", "role": "round", "rounding": "PORT", "headingToNext": 113 },
+        { "buoyId": "S", "role": "round", "rounding": "PORT", "headingToNext": 0 },
+        { "buoyId": "N", "role": "finish" }
+      ]
+    },
+    {
+      "id": "D-NE",
+      "name": "Course D (NE)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 45 },
+        { "buoyId": "NE", "role": "round", "rounding": "PORT", "headingToNext": 292 },
+        { "buoyId": "N", "role": "round", "rounding": "PORT", "headingToNext": 225 },
+        { "buoyId": "W", "role": "round", "rounding": "PORT", "headingToNext": 158 },
+        { "buoyId": "SW", "role": "round", "rounding": "PORT", "headingToNext": 45 },
+        { "buoyId": "NE", "role": "finish" }
+      ]
+    },
+    {
+      "id": "D-E",
+      "name": "Course D (E)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 90 },
+        { "buoyId": "E", "role": "round", "rounding": "PORT", "headingToNext": 337 },
+        { "buoyId": "NE", "role": "round", "rounding": "PORT", "headingToNext": 270 },
+        { "buoyId": "NW", "role": "round", "rounding": "PORT", "headingToNext": 203 },
+        { "buoyId": "W", "role": "round", "rounding": "PORT", "headingToNext": 90 },
+        { "buoyId": "E", "role": "finish" }
+      ]
+    },
+    {
+      "id": "D-SE",
+      "name": "Course D (SE)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 135 },
+        { "buoyId": "SE", "role": "round", "rounding": "PORT", "headingToNext": 22 },
+        { "buoyId": "E", "role": "round", "rounding": "PORT", "headingToNext": 315 },
+        { "buoyId": "N", "role": "round", "rounding": "PORT", "headingToNext": 248 },
+        { "buoyId": "NW", "role": "round", "rounding": "PORT", "headingToNext": 135 },
+        { "buoyId": "SE", "role": "finish" }
+      ]
+    },
+    {
+      "id": "D-S",
+      "name": "Course D (S)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 180 },
+        { "buoyId": "S", "role": "round", "rounding": "PORT", "headingToNext": 67 },
+        { "buoyId": "SE", "role": "round", "rounding": "PORT", "headingToNext": 0 },
+        { "buoyId": "NE", "role": "round", "rounding": "PORT", "headingToNext": 293 },
+        { "buoyId": "N", "role": "round", "rounding": "PORT", "headingToNext": 180 },
+        { "buoyId": "S", "role": "finish" }
+      ]
+    },
+    {
+      "id": "D-SW",
+      "name": "Course D (SW)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 225 },
+        { "buoyId": "SW", "role": "round", "rounding": "PORT", "headingToNext": 112 },
+        { "buoyId": "S", "role": "round", "rounding": "PORT", "headingToNext": 45 },
+        { "buoyId": "E", "role": "round", "rounding": "PORT", "headingToNext": 338 },
+        { "buoyId": "NE", "role": "round", "rounding": "PORT", "headingToNext": 225 },
+        { "buoyId": "SW", "role": "finish" }
+      ]
+    },
+    {
+      "id": "D-W",
+      "name": "Course D (W)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 270 },
+        { "buoyId": "W", "role": "round", "rounding": "PORT", "headingToNext": 157 },
+        { "buoyId": "SW", "role": "round", "rounding": "PORT", "headingToNext": 90 },
+        { "buoyId": "SE", "role": "round", "rounding": "PORT", "headingToNext": 23 },
+        { "buoyId": "E", "role": "round", "rounding": "PORT", "headingToNext": 270 },
+        { "buoyId": "W", "role": "finish" }
+      ]
+    },
+    {
+      "id": "D-NW",
+      "name": "Course D (NW)",
+      "type": "Modified Olympic trapezoid",
+      "turns": [
+        { "buoyId": "CENTER", "role": "start", "headingToNext": 315 },
+        { "buoyId": "NW", "role": "round", "rounding": "PORT", "headingToNext": 202 },
+        { "buoyId": "W", "role": "round", "rounding": "PORT", "headingToNext": 135 },
+        { "buoyId": "S", "role": "round", "rounding": "PORT", "headingToNext": 68 },
+        { "buoyId": "SE", "role": "round", "rounding": "PORT", "headingToNext": 315 },
+        { "buoyId": "NW", "role": "finish" }
+      ]
     }
   ]
 }
