@@ -27,10 +27,13 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
+  static const _gpsSignalTimeout = Duration(seconds: 8);
+
   late final PositionSource _source;
   late final bool _ownsSource;
   final _mapTransformController = TransformationController();
   StreamSubscription<Position>? _sub;
+  Timer? _gpsSignalTimer;
   Position? _pos;
   String? _error;
 
@@ -55,14 +58,55 @@ class _MapScreenState extends State<MapScreen> {
       setState(() => _error = err);
       return;
     }
-    _sub = _source.stream.listen((p) {
-      if (mounted) setState(() => _pos = p);
+    _sub = _source.stream.listen(
+      (p) {
+        if (!mounted) return;
+        _gpsSignalTimer?.cancel();
+        setState(() => _pos = p);
+      },
+      onError: (error) {
+        if (!mounted || isTransientLocationStreamError(error)) return;
+        setState(() => _error = error.toString());
+      },
+    );
+    _armGpsSignalTimeout();
+    unawaited(_primeInitialFix());
+  }
+
+  Future<void> _primeInitialFix() async {
+    try {
+      final initial = await _source.getInitialPosition();
+      if (!mounted || initial == null || _pos != null) return;
+      _gpsSignalTimer?.cancel();
+      setState(() => _pos = initial);
+    } catch (_) {
+      // Best-effort only. The live stream remains the source of truth.
+    }
+  }
+
+  void _armGpsSignalTimeout() {
+    _gpsSignalTimer?.cancel();
+    _gpsSignalTimer = Timer(_gpsSignalTimeout, () {
+      if (!mounted || _pos != null || _error != null) return;
+      unawaited(_attemptStartupRecovery());
     });
+  }
+
+  Future<void> _attemptStartupRecovery() async {
+    try {
+      final recovered = await _source.getRecoveryPosition();
+      if (!mounted || recovered == null || _pos != null) return;
+      _gpsSignalTimer?.cancel();
+      setState(() => _pos = recovered);
+    } catch (_) {
+      // Best-effort only. The stream remains the source of truth.
+    }
   }
 
   @override
   void dispose() {
     _sub?.cancel();
+    _gpsSignalTimer?.cancel();
     _mapTransformController.dispose();
     if (_ownsSource) _source.dispose();
     super.dispose();

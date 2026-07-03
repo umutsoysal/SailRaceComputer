@@ -103,6 +103,43 @@ class _RecoveryOnlyPositionSource implements PositionSource {
   Future<void> dispose() => _controller.close();
 }
 
+class _TransientErrorThenFixPositionSource implements PositionSource {
+  _TransientErrorThenFixPositionSource(this._position);
+
+  final Position _position;
+  final _controller = StreamController<Position>.broadcast();
+
+  @override
+  Future<String?> ensureReady() async => null;
+
+  @override
+  Future<Position?> getInitialPosition() async => null;
+
+  @override
+  Future<Position?> getRecoveryPosition() async => null;
+
+  @override
+  Stream<Position> get stream => _controller.stream;
+
+  void emitTransientError() {
+    if (!_controller.isClosed) {
+      _controller.addError(
+        'LOCATION UPDATE FAILURE:Error reason: (null)Error description: '
+        'The operation couldn’t be completed. (kCLErrorDomain error 1.)',
+      );
+    }
+  }
+
+  void emitFix() {
+    if (!_controller.isClosed) {
+      _controller.add(_position);
+    }
+  }
+
+  @override
+  Future<void> dispose() => _controller.close();
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -156,7 +193,8 @@ void main() {
   });
 
   testWidgets(
-      'shows acquiring gps during initial warm-up and does not show no gps signal before first fix', (
+      'shows acquiring gps during initial warm-up and does not show no gps signal before first fix',
+      (
     tester,
   ) async {
     final source = _DelayedPositionSource();
@@ -201,7 +239,8 @@ void main() {
   });
 
   testWidgets(
-      'shows no gps signal only after a real fix has been lost for the timeout window', (
+      'shows no gps signal only after a real fix has been lost for the timeout window',
+      (
     tester,
   ) async {
     final source = _DelayedPositionSource();
@@ -240,8 +279,8 @@ void main() {
     expect(find.text('No GPS Signal'), findsOneWidget);
   });
 
-  testWidgets(
-      'uses an initial gps fix before the live stream produces updates', (
+  testWidgets('uses an initial gps fix before the live stream produces updates',
+      (
     tester,
   ) async {
     final course = Course(
@@ -272,7 +311,8 @@ void main() {
   });
 
   testWidgets(
-      'uses a recovery gps sample before showing no gps signal when the stream goes quiet', (
+      'uses a recovery gps sample before showing no gps signal when the stream goes quiet',
+      (
     tester,
   ) async {
     final course = Course(
@@ -303,6 +343,48 @@ void main() {
 
     expect(find.text('Acquiring GPS...'), findsNothing);
     expect(find.text('No GPS Signal'), findsNothing);
+    expect(find.textContaining('±'), findsWidgets);
+  });
+
+  testWidgets(
+      'ignores transient iOS location-unknown stream errors while waiting for a fix',
+      (
+    tester,
+  ) async {
+    final source = _TransientErrorThenFixPositionSource(makePosition());
+    final course = Course(
+      name: 'Harbor Start',
+      buoys: [
+        Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62)),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RaceScreen(
+          course: course,
+          positionSource: source,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
+    await tester.pump();
+
+    source.emitTransientError();
+    await tester.pump();
+
+    expect(find.text('Acquiring GPS...'), findsOneWidget);
+    expect(find.text('No GPS Signal'), findsNothing);
+    expect(find.textContaining('kCLErrorDomain error 1'), findsNothing);
+
+    source.emitFix();
+    await tester.pump();
+    await tester.idle();
+    await tester.pump();
+
+    expect(find.text('Acquiring GPS...'), findsNothing);
     expect(find.textContaining('±'), findsWidgets);
   });
 }

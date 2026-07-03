@@ -32,7 +32,7 @@ Future<ImportedCourseDefinition?> pickImportedCourse(
             Expanded(
               child: ListView.separated(
                 itemCount: bundle.courses.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
+                separatorBuilder: (_, index) => const Divider(height: 1),
                 itemBuilder: (context, index) {
                   final imported = bundle.courses[index];
                   return ListTile(

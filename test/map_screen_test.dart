@@ -31,6 +31,87 @@ class _ErrorPositionSource implements PositionSource {
   Future<void> dispose() => _controller.close();
 }
 
+class _TransientErrorThenFixPositionSource implements PositionSource {
+  _TransientErrorThenFixPositionSource(this._position);
+
+  final Position _position;
+  final _controller = StreamController<Position>.broadcast();
+
+  @override
+  Future<String?> ensureReady() async => null;
+
+  @override
+  Future<Position?> getInitialPosition() async => null;
+
+  @override
+  Future<Position?> getRecoveryPosition() async => null;
+
+  @override
+  Stream<Position> get stream => _controller.stream;
+
+  void emitTransientError() {
+    if (!_controller.isClosed) {
+      _controller.addError(
+        'LOCATION UPDATE FAILURE:Error reason: (null)Error description: '
+        'The operation couldn’t be completed. (kCLErrorDomain error 1.)',
+      );
+    }
+  }
+
+  void emitFix() {
+    if (!_controller.isClosed) {
+      _controller.add(_position);
+    }
+  }
+
+  @override
+  Future<void> dispose() => _controller.close();
+}
+
+class _InitialFixOnlyPositionSource implements PositionSource {
+  _InitialFixOnlyPositionSource(this._position);
+
+  final Position _position;
+  final _controller = StreamController<Position>.broadcast();
+
+  @override
+  Future<String?> ensureReady() async => null;
+
+  @override
+  Future<Position?> getInitialPosition() async => _position;
+
+  @override
+  Future<Position?> getRecoveryPosition() async => null;
+
+  @override
+  Stream<Position> get stream => _controller.stream;
+
+  @override
+  Future<void> dispose() => _controller.close();
+}
+
+class _RecoveryOnlyPositionSource implements PositionSource {
+  _RecoveryOnlyPositionSource(this._position);
+
+  final Position _position;
+  final _controller = StreamController<Position>.broadcast();
+
+  @override
+  Future<String?> ensureReady() async => null;
+
+  @override
+  Future<Position?> getInitialPosition() async => null;
+
+  @override
+  Future<Position?> getRecoveryPosition() async => _position;
+
+  @override
+  Stream<Position> get stream => _controller.stream;
+
+  @override
+  Future<void> dispose() => _controller.close();
+}
+
 void main() {
   testWidgets('shows actionable permission error instead of waiting chip', (
     tester,
@@ -57,7 +138,8 @@ void main() {
     expect(find.text('Waiting for GPS'), findsNothing);
   });
 
-  testWidgets('wraps the course canvas in an interactive viewer for pinch zoom', (
+  testWidgets('wraps the course canvas in an interactive viewer for pinch zoom',
+      (
     tester,
   ) async {
     final course = Course(
@@ -84,5 +166,134 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(InteractiveViewer), findsOneWidget);
+  });
+
+  testWidgets('ignores transient iOS location-unknown stream errors', (
+    tester,
+  ) async {
+    final source = _TransientErrorThenFixPositionSource(
+      Position(
+        latitude: 41.88,
+        longitude: -87.62,
+        timestamp: DateTime(2024, 6, 1),
+        accuracy: 5,
+        altitude: 0,
+        altitudeAccuracy: 0,
+        heading: 45,
+        headingAccuracy: 0,
+        speed: 2.6,
+        speedAccuracy: 0,
+      ),
+    );
+    final course = Course(
+      name: 'Wednesday Series',
+      buoys: [
+        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapScreen(
+          course: course,
+          positionSource: source,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    source.emitTransientError();
+    await tester.pump();
+
+    expect(find.text('Waiting for GPS'), findsOneWidget);
+    expect(find.textContaining('kCLErrorDomain error 1'), findsNothing);
+
+    source.emitFix();
+    await tester.pump();
+    await tester.idle();
+    await tester.pump();
+
+    expect(find.text('Waiting for GPS'), findsNothing);
+  });
+
+  testWidgets('uses an initial gps fix before the live stream updates', (
+    tester,
+  ) async {
+    final source = _InitialFixOnlyPositionSource(
+      Position(
+        latitude: 41.88,
+        longitude: -87.62,
+        timestamp: DateTime(2024, 6, 1),
+        accuracy: 5,
+        altitude: 0,
+        altitudeAccuracy: 0,
+        heading: 45,
+        headingAccuracy: 0,
+        speed: 2.6,
+        speedAccuracy: 0,
+      ),
+    );
+    final course = Course(
+      name: 'Wednesday Series',
+      buoys: [
+        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapScreen(
+          course: course,
+          positionSource: source,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.idle();
+    await tester.pump();
+
+    expect(find.text('Waiting for GPS'), findsNothing);
+  });
+
+  testWidgets('uses a recovery gps sample after startup timeout',
+      (tester) async {
+    final source = _RecoveryOnlyPositionSource(
+      Position(
+        latitude: 41.88,
+        longitude: -87.62,
+        timestamp: DateTime(2024, 6, 1),
+        accuracy: 5,
+        altitude: 0,
+        altitudeAccuracy: 0,
+        heading: 45,
+        headingAccuracy: 0,
+        speed: 2.6,
+        speedAccuracy: 0,
+      ),
+    );
+    final course = Course(
+      name: 'Wednesday Series',
+      buoys: [
+        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapScreen(
+          course: course,
+          positionSource: source,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Waiting for GPS'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 8));
+    await tester.idle();
+    await tester.pump();
+
+    expect(find.text('Waiting for GPS'), findsNothing);
   });
 }

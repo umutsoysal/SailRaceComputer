@@ -14,6 +14,14 @@ bool isLocationPermissionError(String error) =>
     error == locationPermissionDeniedMessage ||
     error == locationPermissionDeniedForeverMessage;
 
+bool isTransientLocationStreamError(Object error) {
+  final message = error.toString().toLowerCase();
+  return message.contains('kclerrordomain error 1') ||
+      message.contains('location update failure') ||
+      message.contains('location unknown') ||
+      message.contains('clerror.locationunknown');
+}
+
 /// Abstraction over "where do position fixes come from" so the production app
 /// can use real GPS and the dev simulator can inject a fake stream.
 abstract class PositionSource {
@@ -39,12 +47,15 @@ abstract class PositionSource {
 class GeolocatorPositionSource implements PositionSource {
   static const _maxSeedAge = Duration(seconds: 10);
   static const _maxRecoveryAge = Duration(seconds: 3);
+  static const _activeRecoveryTimeout = Duration(seconds: 4);
 
   StreamSubscription<Position>? _sub;
   StreamController<Position>? _ctrl;
+  var _hasTriedActiveRecovery = false;
 
   @override
   Future<String?> ensureReady() async {
+    _hasTriedActiveRecovery = false;
     final enabled = await Geolocator.isLocationServiceEnabled();
     if (!enabled) return locationServicesDisabledMessage;
     var perm = await Geolocator.checkPermission();
@@ -69,17 +80,37 @@ class GeolocatorPositionSource implements PositionSource {
   Future<Position?> getInitialPosition() => _freshLastKnown(_maxSeedAge);
 
   @override
-  Future<Position?> getRecoveryPosition() => _freshLastKnown(_maxRecoveryAge);
+  Future<Position?> getRecoveryPosition() async {
+    final cached = await _freshLastKnown(_maxRecoveryAge);
+    if (cached != null) return cached;
+    if (_hasTriedActiveRecovery) return null;
+    _hasTriedActiveRecovery = true;
+    return _boundedCurrentPosition();
+  }
 
   Future<Position?> _freshLastKnown(Duration maxAge) async {
     try {
       final lastKnown = await Geolocator.getLastKnownPosition();
       if (lastKnown == null) return null;
       final age = DateTime.now().toUtc().difference(
-        lastKnown.timestamp.toUtc(),
-      );
+            lastKnown.timestamp.toUtc(),
+          );
       return age <= maxAge ? lastKnown : null;
     } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Position?> _boundedCurrentPosition() async {
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+          timeLimit: _activeRecoveryTimeout,
+        ),
+      );
+    } catch (error) {
+      if (isTransientLocationStreamError(error)) return null;
       return null;
     }
   }
@@ -95,7 +126,13 @@ class GeolocatorPositionSource implements PositionSource {
         accuracy: LocationAccuracy.bestForNavigation,
         distanceFilter: 0,
       ),
-    ).listen(c.add, onError: c.addError);
+    ).listen(
+      c.add,
+      onError: (error) {
+        if (isTransientLocationStreamError(error)) return;
+        c.addError(error);
+      },
+    );
     return c.stream;
   }
 

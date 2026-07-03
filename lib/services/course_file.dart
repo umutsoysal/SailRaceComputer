@@ -526,10 +526,10 @@ class ImportedCourseDefinition {
   String? get summary {
     final parts = <String>[
       id,
-      ?type,
+      if (type != null) type!,
       if (distanceNm != null)
         '${distanceNm!.toStringAsFixed(distanceNm! % 1 == 0 ? 0 : 2)} NM',
-      ?fleet,
+      if (fleet != null) fleet!,
     ];
     if (parts.isEmpty) return null;
     return parts.join(' · ');

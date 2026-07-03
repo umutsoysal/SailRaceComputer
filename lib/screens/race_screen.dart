@@ -245,6 +245,7 @@ class _RaceScreenState extends State<RaceScreen> {
         _onFix,
         onError: (e) {
           if (!mounted) return;
+          if (isTransientLocationStreamError(e)) return;
           setState(() {
             _error = e.toString();
             _showNoGpsSignal = false;
