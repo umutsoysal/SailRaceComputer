@@ -12,7 +12,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('bottom navigation library tab shows saved race GPX entries', (
+  testWidgets('bottom navigation exposes library and settings tabs', (
     tester,
   ) async {
     final raceStore = RaceSessionStore();
@@ -45,6 +45,7 @@ void main() {
     expect(find.text('Race'), findsOneWidget);
     expect(find.text('Map'), findsOneWidget);
     expect(find.text('Library'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
 
     await tester.tap(find.text('Library'));
     await tester.pumpAndSettle();
@@ -52,5 +53,21 @@ void main() {
     expect(find.text('Races'), findsOneWidget);
     expect(find.text('Wednesday Series'), findsOneWidget);
     expect(find.byTooltip('View GPX'), findsOneWidget);
+
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('General App Settings'), findsOneWidget);
+    expect(find.text('Feedback'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Privacy'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Privacy'), findsOneWidget);
+    expect(find.text('Terms of Use'), findsOneWidget);
   });
 }

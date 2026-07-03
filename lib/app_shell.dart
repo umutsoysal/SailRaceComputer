@@ -4,6 +4,7 @@ import 'screens/course_screen.dart';
 import 'screens/library_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/race_screen.dart';
+import 'screens/settings_screen.dart';
 import 'services/position_source.dart';
 
 /// The user-facing app: Course editor + Race screen tabs.
@@ -63,6 +64,7 @@ class _AppShellState extends State<AppShell> {
               setState(() => _tab = 0);
             },
           ),
+          const SettingsScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -101,6 +103,11 @@ class _AppShellState extends State<AppShell> {
             icon: Icon(Icons.library_books_outlined),
             selectedIcon: Icon(Icons.library_books),
             label: 'Library',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Settings',
           ),
         ],
       ),

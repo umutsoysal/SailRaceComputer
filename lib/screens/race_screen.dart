@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/course.dart';
@@ -31,7 +32,10 @@ class RaceScreen extends StatefulWidget {
 }
 
 class _RaceScreenState extends State<RaceScreen> {
+  static const _startOffsetOptions = <int>[0, 1, 5];
+
   StreamSubscription<Position>? _sub;
+  Timer? _raceClockTimer;
   late final PositionSource _source;
   late final bool _ownsSource;
   final _courseLibrary = CourseLibrary();
@@ -42,6 +46,8 @@ class _RaceScreenState extends State<RaceScreen> {
   bool _autoAdvance = true;
   _RaceState _raceState = _RaceState.stopped;
   DateTime? _raceStartedAt;
+  Duration _raceClockElapsed = Duration.zero;
+  int _startOffsetMinutes = 0;
   String? _finishMessage;
   bool _finishingRace = false;
   final List<RaceTrackPoint> _track = [];
@@ -67,6 +73,7 @@ class _RaceScreenState extends State<RaceScreen> {
 
   @override
   void dispose() {
+    _raceClockTimer?.cancel();
     if (_lastReportedRecording == true) {
       widget.onRecordingChanged?.call(false);
     }
@@ -116,6 +123,51 @@ class _RaceScreenState extends State<RaceScreen> {
 
   Course _copyCourse(Course course) => Course.decode(course.encode());
 
+  Duration get _startOffset => Duration(minutes: _startOffsetMinutes);
+
+  void _startRaceClock() {
+    _raceClockTimer?.cancel();
+    _raceClockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || _raceStartedAt == null) return;
+      setState(() {
+        _raceClockElapsed += const Duration(seconds: 1);
+      });
+    });
+  }
+
+  void _stopRaceClock() {
+    _raceClockTimer?.cancel();
+    _raceClockTimer = null;
+  }
+
+  Duration _officialRaceDuration(DateTime timestamp) {
+    final startedAt = _raceStartedAt;
+    if (startedAt == null) return Duration.zero;
+    final duration = timestamp.difference(startedAt) - _startOffset;
+    return duration.isNegative ? Duration.zero : duration;
+  }
+
+  String _formatRaceClockLabel() {
+    if (_raceStartedAt == null) return 'Ready to race';
+    final remaining = _startOffset - _raceClockElapsed;
+    if (remaining > Duration.zero) {
+      return formatEta(remaining);
+    }
+    return formatEta(_raceClockElapsed - _startOffset);
+  }
+
+  String _raceClockCaption() {
+    if (_raceStartedAt == null) return '';
+    final remaining = _startOffset - _raceClockElapsed;
+    return remaining > Duration.zero ? 'Start In' : 'Elapsed';
+  }
+
+  String _startOffsetLabel(int minutes) {
+    if (minutes == 0) return 'Now';
+    if (minutes == 1) return '1 min';
+    return '$minutes mins';
+  }
+
   void _reportRecordingChanged() {
     final isRecording = _raceState == _RaceState.running;
     if (_lastReportedRecording == isRecording) return;
@@ -135,6 +187,7 @@ class _RaceScreenState extends State<RaceScreen> {
         _error = null;
         _finishMessage = null;
         _raceStartedAt = DateTime.now().toUtc();
+        _raceClockElapsed = Duration.zero;
         _currentMark = 0;
         _pos = null;
         _track.clear();
@@ -146,11 +199,15 @@ class _RaceScreenState extends State<RaceScreen> {
         setState(() {
           _error = err;
           _raceState = _RaceState.stopped;
+          _raceStartedAt = null;
+          _raceClockElapsed = Duration.zero;
         });
+        _stopRaceClock();
         _reportRecordingChanged();
         return;
       }
       setState(() => _raceState = _RaceState.running);
+      _startRaceClock();
       _reportRecordingChanged();
       _sub = _source.stream.listen(
         _onFix,
@@ -164,7 +221,10 @@ class _RaceScreenState extends State<RaceScreen> {
       setState(() {
         _error = e.toString();
         _raceState = _RaceState.stopped;
+        _raceStartedAt = null;
+        _raceClockElapsed = Duration.zero;
       });
+      _stopRaceClock();
       _reportRecordingChanged();
     }
   }
@@ -195,7 +255,7 @@ class _RaceScreenState extends State<RaceScreen> {
     if (_finishingRace || _raceStartedAt == null) return;
 
     final finishedAt = DateTime.now().toUtc();
-    final duration = finishedAt.difference(_raceStartedAt!);
+    final duration = _officialRaceDuration(finishedAt);
     final pointCount = _track.length;
     final markLabel =
         'Mark ${_currentMark + 1} of ${widget.course.buoys.length}';
@@ -240,7 +300,7 @@ class _RaceScreenState extends State<RaceScreen> {
 
     final finishedAt = DateTime.now().toUtc();
     final pointCount = _track.length;
-    final duration = finishedAt.difference(_raceStartedAt!);
+    final duration = _officialRaceDuration(finishedAt);
     final finishMessage = _buildFinishMessage(
       completedCourse: completedCourse,
       pointCount: pointCount,
@@ -262,10 +322,12 @@ class _RaceScreenState extends State<RaceScreen> {
         _raceState = _RaceState.finished;
         _error = null;
         _finishMessage = finishMessage;
+        _raceClockElapsed = finishedAt.difference(_raceStartedAt!);
       });
       _reportRecordingChanged();
     }
 
+    _stopRaceClock();
     await _sub?.cancel();
     _sub = null;
     try {
@@ -280,6 +342,7 @@ class _RaceScreenState extends State<RaceScreen> {
         _raceState = _RaceState.paused;
         _error = 'Could not save race data: $e';
       });
+      _startRaceClock();
       _reportRecordingChanged();
       _finishingRace = false;
     }
@@ -362,7 +425,32 @@ class _RaceScreenState extends State<RaceScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Race'),
+        title:
+            _raceState == _RaceState.running || _raceState == _RaceState.paused
+                ? Column(
+                    key: const Key('race-app-bar-timer'),
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _raceClockCaption(),
+                        key: const Key('race-app-bar-timer-caption'),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              letterSpacing: 1.1,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      Text(
+                        _formatRaceClockLabel(),
+                        key: const Key('race-app-bar-timer-value'),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  )
+                : const Text('Race'),
         actions: [
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -554,6 +642,36 @@ class _RaceScreenState extends State<RaceScreen> {
                     }(),
                   ),
               ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Start timer',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _startOffsetOptions
+                  .map(
+                    (minutes) => ChoiceChip(
+                      key: Key('start-offset-$minutes'),
+                      label: Text(_startOffsetLabel(minutes)),
+                      selected: _startOffsetMinutes == minutes,
+                      onSelected: (selected) {
+                        if (!selected) return;
+                        setState(() => _startOffsetMinutes = minutes);
+                      },
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _startOffsetMinutes == 0
+                  ? 'Starts counting up immediately.'
+                  : 'Counts down first, then rolls into elapsed race time.',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
