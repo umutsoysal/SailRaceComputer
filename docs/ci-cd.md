@@ -80,4 +80,4 @@ Packaging commands are documented in [docs/release.md](release.md).
 - Web deploy path issues:
   - Verify repository name and check the base href in the deploy workflow.
 - Release workflow fails version verification:
-  - Ensure the pushed tag exactly matches the full `version:` entry in `pubspec.yaml`, including `+build`.
+  - Ensure the pushed tag matches the exact release tag from `make version-tag`.

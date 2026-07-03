@@ -1,44 +1,55 @@
+import 'dart:convert';
 import 'dart:io';
 
 void main(List<String> args) {
   if (args.length != 1) {
-    stderr.writeln('Usage: dart run tool/verify_release_version.dart <tag>');
+    stderr.writeln('Usage: dart tool/verify_release_version.dart <tag>');
     exit(64);
   }
 
   final rawTag = args.single.trim();
-  final normalizedTag =
-      rawTag.startsWith('refs/tags/') ? rawTag.substring(10) : rawTag;
-  final expectedVersion = normalizedTag.startsWith('v')
-      ? normalizedTag.substring(1)
-      : normalizedTag;
+  final normalizedTag = rawTag.startsWith('refs/tags/')
+      ? rawTag.substring(10)
+      : rawTag;
+  final expectedTag = normalizedTag.startsWith('v')
+      ? normalizedTag
+      : 'v$normalizedTag';
 
-  final pubspec = File('pubspec.yaml');
-  if (!pubspec.existsSync()) {
-    stderr.writeln('pubspec.yaml not found.');
+  final versionFile = File('app_version.json');
+  if (!versionFile.existsSync()) {
+    stderr.writeln('app_version.json not found.');
     exit(66);
   }
 
-  final versionLine = pubspec
-      .readAsLinesSync()
-      .map((line) => line.trim())
-      .firstWhere((line) => line.startsWith('version:'), orElse: () => '');
-
-  if (versionLine.isEmpty) {
-    stderr.writeln('Unable to find a version entry in pubspec.yaml.');
+  final raw = jsonDecode(versionFile.readAsStringSync());
+  if (raw is! Map<String, dynamic>) {
+    stderr.writeln('app_version.json must contain a JSON object.');
     exit(65);
   }
 
-  final currentVersion = versionLine.substring('version:'.length).trim();
-  if (currentVersion != expectedVersion) {
+  final marketing = raw['marketing'];
+  final androidBuild = raw['android_build'];
+  final iosBuild = raw['ios_build'];
+  if (marketing is! String ||
+      !RegExp(r'^\d+\.\d+\.\d+$').hasMatch(marketing) ||
+      androidBuild is! int ||
+      iosBuild is! int ||
+      androidBuild < 1 ||
+      iosBuild < 1) {
     stderr.writeln(
-      'Tag $normalizedTag does not match exact pubspec version '
-      '$currentVersion. Use tag v$currentVersion.',
+      'app_version.json must contain valid marketing, android_build, and ios_build values.',
+    );
+    exit(65);
+  }
+
+  final currentTag = 'v$marketing-a$androidBuild-i$iosBuild';
+  if (currentTag != expectedTag) {
+    stderr.writeln(
+      'Tag $normalizedTag does not match release metadata for $marketing. '
+      'Use tag $currentTag.',
     );
     exit(1);
   }
 
-  stdout.writeln(
-    'Verified pubspec version $currentVersion for tag $normalizedTag.',
-  );
+  stdout.writeln('Verified release version $marketing for tag $normalizedTag.');
 }

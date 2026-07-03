@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+user_home=""
+if [[ -n "${USER:-}" ]]; then
+  user_home="$(eval echo "~${USER}" 2>/dev/null || true)"
+fi
+
 if [[ -n "${FLUTTER_BIN:-}" && -x "${FLUTTER_BIN}" ]]; then
   exec "${FLUTTER_BIN}" "$@"
 fi
@@ -10,6 +15,8 @@ if command -v flutter >/dev/null 2>&1; then
 fi
 
 for candidate in \
+  "${user_home}/flutter/bin/flutter" \
+  "${user_home}/fvm/default/bin/flutter" \
   "$HOME/flutter/bin/flutter" \
   "$HOME/fvm/default/bin/flutter" \
   "/opt/homebrew/bin/flutter"

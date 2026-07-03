@@ -31,10 +31,10 @@ jobs:
         run: flutter pub get
 
       - name: Validate version metadata
-        run: dart run tool/version.dart check
+        run: dart tool/version.dart check
 
       - name: Verify release version
-        run: dart run tool/verify_release_version.dart "${GITHUB_REF_NAME}"
+        run: dart tool/verify_release_version.dart "${GITHUB_REF_NAME}"
 
       - name: Decode Android keystore
         if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
@@ -53,15 +53,16 @@ jobs:
 
       - name: Build Android and Web artifacts
         run: |
-          flutter build apk --release
-          flutter build appbundle --release
-          flutter build web --release --base-href "/"
+          flutter build apk --release $(dart tool/version.dart build-args android)
+          flutter build appbundle --release $(dart tool/version.dart build-args android)
+          flutter build web --release --base-href "/" $(dart tool/version.dart build-args web)
 
       - name: Collect release assets
         run: |
           mkdir -p release-assets
-          cp build/app/outputs/flutter-apk/app-release.apk release-assets/race-mate-${GITHUB_REF_NAME}.apk
-          cp build/app/outputs/bundle/release/app-release.aab release-assets/race-mate-${GITHUB_REF_NAME}.aab
+          ANDROID_BUILD="$(dart tool/version.dart value android-build)"
+          cp build/app/outputs/flutter-apk/app-release.apk release-assets/race-mate-${GITHUB_REF_NAME}-android-b${ANDROID_BUILD}.apk
+          cp build/app/outputs/bundle/release/app-release.aab release-assets/race-mate-${GITHUB_REF_NAME}-android-b${ANDROID_BUILD}.aab
           tar -czf release-assets/race-mate-web-${GITHUB_REF_NAME}.tar.gz -C build/web .
 
       - name: Upload packaged Android and Web assets
@@ -89,18 +90,19 @@ jobs:
         run: flutter pub get
 
       - name: Validate version metadata
-        run: dart run tool/version.dart check
+        run: dart tool/version.dart check
 
       - name: Verify release version
-        run: dart run tool/verify_release_version.dart "${GITHUB_REF_NAME}"
+        run: dart tool/verify_release_version.dart "${GITHUB_REF_NAME}"
 
       - name: Build unsigned iOS release bundle
-        run: flutter build ios --release --no-codesign
+        run: flutter build ios --release --no-codesign $(dart tool/version.dart build-args ios)
 
       - name: Archive iOS app bundle
         run: |
           mkdir -p release-assets
-          ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app release-assets/race-mate-ios-${GITHUB_REF_NAME}-unsigned.zip
+          IOS_BUILD="$(dart tool/version.dart value ios-build)"
+          ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app release-assets/race-mate-ios-${GITHUB_REF_NAME}-ios-b${IOS_BUILD}-unsigned.zip
 
       - name: Upload packaged iOS asset
         uses: actions/upload-artifact@v4
