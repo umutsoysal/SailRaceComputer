@@ -6,11 +6,12 @@ import '../services/app_analytics.dart';
 import '../services/course_library.dart';
 import '../services/location_service.dart';
 import '../services/position_source.dart';
+import '../services/race_computations.dart';
 import '../services/race_session_store.dart';
 import '../utils/geo.dart';
 import '../widgets/course_map_painter.dart';
 
-enum _RaceState { stopped, running, paused, finished }
+enum _RaceState { stopped, running, finished }
 
 /// Live race screen — shows the next mark with bearing, distance, SOG, COG,
 /// and VMG toward the mark.
@@ -95,7 +96,7 @@ class _RaceScreenState extends State<RaceScreen> {
     final fix = _locationService.position;
     if (fix == null) return false;
     if (_locationService.fixVersion == _lastProcessedFixVersion) return false;
-    if (_raceState != _RaceState.running && _raceState != _RaceState.paused) {
+    if (_raceState != _RaceState.running) {
       return false;
     }
     _lastProcessedFixVersion = _locationService.fixVersion;
@@ -126,7 +127,7 @@ class _RaceScreenState extends State<RaceScreen> {
   }
 
   Future<void> _selectCourse(Course course) async {
-    if (_raceState == _RaceState.running || _raceState == _RaceState.paused) {
+    if (_raceState == _RaceState.running) {
       return;
     }
     setState(() {
@@ -144,6 +145,13 @@ class _RaceScreenState extends State<RaceScreen> {
   Course _copyCourse(Course course) => Course.decode(course.encode());
 
   Duration get _startOffset => Duration(minutes: _startOffsetMinutes);
+  RaceClockDisplay get _raceClock => buildRaceClockDisplay(
+        startedAt: _raceStartedAt,
+        elapsed: _raceClockElapsed,
+        startOffset: _startOffset,
+      );
+  CourseMetrics get _selectedCourseMetrics =>
+      buildCourseMetrics(_selectedCourse);
 
   void _startRaceClock() {
     _raceClockTimer?.cancel();
@@ -158,28 +166,6 @@ class _RaceScreenState extends State<RaceScreen> {
   void _stopRaceClock() {
     _raceClockTimer?.cancel();
     _raceClockTimer = null;
-  }
-
-  Duration _officialRaceDuration(DateTime timestamp) {
-    final startedAt = _raceStartedAt;
-    if (startedAt == null) return Duration.zero;
-    final duration = timestamp.difference(startedAt) - _startOffset;
-    return duration.isNegative ? Duration.zero : duration;
-  }
-
-  String _formatRaceClockLabel() {
-    if (_raceStartedAt == null) return 'Ready to race';
-    final remaining = _startOffset - _raceClockElapsed;
-    if (remaining > Duration.zero) {
-      return formatEta(remaining);
-    }
-    return formatEta(_raceClockElapsed - _startOffset);
-  }
-
-  String _raceClockCaption() {
-    if (_raceStartedAt == null) return '';
-    final remaining = _startOffset - _raceClockElapsed;
-    return remaining > Duration.zero ? 'Start In' : 'Elapsed';
   }
 
   String _startOffsetLabel(int minutes) {
@@ -271,28 +257,6 @@ class _RaceScreenState extends State<RaceScreen> {
     }
   }
 
-  void _pauseRace() {
-    if (_raceState != _RaceState.running) return;
-    _locationService.pause();
-    if (!mounted) return;
-    setState(() {
-      _raceError = null;
-      _raceState = _RaceState.paused;
-    });
-    _reportRecordingChanged();
-  }
-
-  void _resumeRace() {
-    if (_raceState != _RaceState.paused) return;
-    _locationService.resume();
-    if (!mounted) return;
-    setState(() {
-      _raceError = null;
-      _raceState = _RaceState.running;
-    });
-    _reportRecordingChanged();
-  }
-
   void _showLocationErrorDialog(String error) {
     if (!mounted) return;
     final actionLabel = isLocationServicesDisabledError(error)
@@ -338,7 +302,11 @@ class _RaceScreenState extends State<RaceScreen> {
     if (_finishingRace || _raceStartedAt == null) return;
 
     final finishedAt = DateTime.now().toUtc();
-    final duration = _officialRaceDuration(finishedAt);
+    final duration = computeOfficialRaceDuration(
+      startedAt: _raceStartedAt,
+      timestamp: finishedAt,
+      startOffset: _startOffset,
+    );
     final pointCount = _track.length;
     final markLabel =
         'Mark ${_currentMark + 1} of ${_selectedCourse.buoys.length}';
@@ -383,7 +351,11 @@ class _RaceScreenState extends State<RaceScreen> {
 
     final finishedAt = DateTime.now().toUtc();
     final pointCount = _track.length;
-    final duration = _officialRaceDuration(finishedAt);
+    final duration = computeOfficialRaceDuration(
+      startedAt: _raceStartedAt,
+      timestamp: finishedAt,
+      startOffset: _startOffset,
+    );
     final finishMessage = _buildFinishMessage(
       completedCourse: completedCourse,
       pointCount: pointCount,
@@ -400,6 +372,7 @@ class _RaceScreenState extends State<RaceScreen> {
     );
 
     _locationService.pause();
+    _stopRaceClock();
     if (mounted) {
       setState(() {
         _raceState = _RaceState.finished;
@@ -409,8 +382,6 @@ class _RaceScreenState extends State<RaceScreen> {
       });
       _reportRecordingChanged();
     }
-
-    _stopRaceClock();
     try {
       await _sessionStore.saveCompleted(record);
       await _locationService.stop(clearError: true);
@@ -427,11 +398,12 @@ class _RaceScreenState extends State<RaceScreen> {
       ).showSnackBar(SnackBar(content: Text(finishMessage)));
     } catch (e) {
       if (!mounted) return;
+      _locationService.resume();
+      _startRaceClock();
       setState(() {
-        _raceState = _RaceState.paused;
+        _raceState = _RaceState.running;
         _raceError = 'Could not save race data: $e';
       });
-      _startRaceClock();
       _reportRecordingChanged();
       _finishingRace = false;
     }
@@ -456,26 +428,19 @@ class _RaceScreenState extends State<RaceScreen> {
 
   void _processRaceFix(Position p) {
     final point = RaceTrackPoint.fromPosition(p);
-    var reachedFinish = false;
+    final progress = computeRaceProgress(
+      fix: p,
+      course: _selectedCourse,
+      currentMarkIndex: _currentMark,
+      autoAdvance: _autoAdvance,
+      canFinishRace: _raceState == _RaceState.running,
+    );
     setState(() {
       _raceError = null;
       _track.add(point);
-      if (_autoAdvance && _currentMark < _selectedCourse.buoys.length) {
-        final mark = _selectedCourse.buoys[_currentMark];
-        final d = distanceMeters(
-          LatLng(p.latitude, p.longitude),
-          mark.position,
-        );
-        if (d <= mark.roundingRadiusM) {
-          if (_currentMark < _selectedCourse.buoys.length - 1) {
-            _currentMark++;
-          } else if (_raceState == _RaceState.running) {
-            reachedFinish = true;
-          }
-        }
-      }
+      _currentMark = progress.nextMarkIndex;
     });
-    if (reachedFinish) {
+    if (progress.reachedFinish) {
       unawaited(_finishRace(completedCourse: true));
     }
   }
@@ -503,45 +468,46 @@ class _RaceScreenState extends State<RaceScreen> {
     }
 
     final mark = buoys[_currentMark];
-    final fix = _locationService.position;
-    final here = fix == null ? null : LatLng(fix.latitude, fix.longitude);
-
-    final distance = here == null ? null : distanceMeters(here, mark.position);
-    final bearing = here == null ? null : bearingDegrees(here, mark.position);
-    final sog = fix?.speed ?? 0.0; // m/s
-    final cog = fix?.heading ?? 0.0; // degrees true
-    final vmg = (bearing == null) ? 0.0 : vmgMs(sog, cog, bearing);
-    final etaSeconds =
-        (vmg > 0.05 && distance != null) ? (distance / vmg).round() : null;
+    final metrics = buildActiveRaceMetrics(
+      fix: _locationService.position,
+      mark: mark,
+    );
+    final fix = metrics.fix;
+    final distance = metrics.distanceMeters;
+    final bearing = metrics.bearingDegrees;
+    final sog = metrics.speedMs;
+    final cog = metrics.headingDegrees;
+    final vmg = metrics.vmgMs;
+    final etaSeconds = metrics.etaSeconds;
+    final clock = _raceClock;
 
     return Scaffold(
       appBar: AppBar(
-        title:
-            _raceState == _RaceState.running || _raceState == _RaceState.paused
-                ? Column(
-                    key: const Key('race-app-bar-timer'),
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _raceClockCaption(),
-                        key: const Key('race-app-bar-timer-caption'),
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              letterSpacing: 1.1,
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      Text(
-                        _formatRaceClockLabel(),
-                        key: const Key('race-app-bar-timer-value'),
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontFeatures: const [FontFeature.tabularFigures()],
+        title: _raceState == _RaceState.running
+            ? Column(
+                key: const Key('race-app-bar-timer'),
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    clock.caption,
+                    key: const Key('race-app-bar-timer-caption'),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          letterSpacing: 1.1,
                           fontWeight: FontWeight.w700,
                         ),
-                      ),
-                    ],
-                  )
-                : const Text('Race'),
+                  ),
+                  Text(
+                    clock.label,
+                    key: const Key('race-app-bar-timer-value'),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              )
+            : const Text('Race'),
         actions: [
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -559,44 +525,12 @@ class _RaceScreenState extends State<RaceScreen> {
               ),
             ],
           ),
-          if (_raceState == _RaceState.running ||
-              _raceState == _RaceState.paused)
-            IconButton(
-              tooltip: switch (_raceState) {
-                _RaceState.running => 'Pause race',
-                _RaceState.paused => 'Resume race',
-                _RaceState.stopped => 'Start race',
-                _RaceState.finished => 'Start new race',
-              },
-              icon: Icon(
-                _raceState == _RaceState.running
-                    ? Icons.pause
-                    : Icons.play_arrow,
-              ),
-              onPressed: switch (_raceState) {
-                _RaceState.running => _pauseRace,
-                _RaceState.paused => _resumeRace,
-                _RaceState.stopped => _startRace,
-                _RaceState.finished => _startRace,
-              },
-            ),
-          IconButton(
-            tooltip: 'Finish and save race',
-            icon: const Icon(Icons.flag),
-            onPressed: switch (_raceState) {
-              _RaceState.running => _confirmAndFinishRace,
-              _RaceState.paused => _confirmAndFinishRace,
-              _RaceState.stopped => null,
-              _RaceState.finished => null,
-            },
-          ),
         ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            if (_raceState == _RaceState.running ||
-                _raceState == _RaceState.paused)
+            if (_raceState == _RaceState.running)
               _buildGpsStatusBanner(context),
             Expanded(
               child: Builder(
@@ -755,6 +689,10 @@ class _RaceScreenState extends State<RaceScreen> {
                 ],
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: _finishRaceButton(),
+            ),
           ],
         );
       },
@@ -875,15 +813,7 @@ class _RaceScreenState extends State<RaceScreen> {
                 if (_selectedCourse.buoys.length >= 2)
                   _courseChip(
                     Icons.straighten,
-                    () {
-                      double total = 0;
-                      final b = _selectedCourse.buoys;
-                      for (int i = 0; i < b.length - 1; i++) {
-                        total +=
-                            distanceMeters(b[i].position, b[i + 1].position);
-                      }
-                      return '${metersToNm(total).toStringAsFixed(1)} NM total';
-                    }(),
+                    '${metersToNm(_selectedCourseMetrics.totalDistanceMeters).toStringAsFixed(1)} NM total',
                   ),
               ],
             ),
@@ -984,6 +914,22 @@ class _RaceScreenState extends State<RaceScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _finishRaceButton() {
+    return FilledButton.icon(
+      key: const Key('finish-race-button'),
+      onPressed: _finishingRace ? null : _confirmAndFinishRace,
+      icon: const Icon(Icons.flag),
+      label: const Text('Finish & save'),
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

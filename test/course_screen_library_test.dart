@@ -6,6 +6,7 @@ import 'package:sail_race_computer/app_shell.dart';
 import 'package:sail_race_computer/models/course.dart';
 import 'package:sail_race_computer/services/race_session_store.dart';
 import 'package:sail_race_computer/utils/geo.dart';
+import 'package:sail_race_computer/widgets/recording_map_preview.dart';
 
 void main() {
   setUp(() {
@@ -26,7 +27,26 @@ void main() {
         totalMarks: 3,
         finalMarkIndex: 2,
         completedCourse: true,
-        track: const [],
+        track: [
+          RaceTrackPoint(
+            recordedAt: DateTime.utc(2026, 7, 2, 23, 40),
+            latitude: 41.88,
+            longitude: -87.62,
+            accuracyM: 5,
+            speedMs: 2.4,
+            headingDeg: 35,
+            altitudeM: 180,
+          ),
+          RaceTrackPoint(
+            recordedAt: DateTime.utc(2026, 7, 2, 23, 45),
+            latitude: 41.885,
+            longitude: -87.615,
+            accuracyM: 5,
+            speedMs: 2.8,
+            headingDeg: 42,
+            altitudeM: 180,
+          ),
+        ],
       ),
     );
     expect(await raceStore.listSaved(), hasLength(1));
@@ -62,7 +82,7 @@ void main() {
     expect(find.text('Saved Courses'), findsNothing);
     expect(find.text('Recorded Races'), findsNothing);
 
-    await tester.tap(find.byType(ModalBarrier));
+    await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Recordings'));
@@ -71,6 +91,7 @@ void main() {
     expect(find.text('Recorded Races'), findsOneWidget);
     expect(find.text('Wednesday Series'), findsOneWidget);
     expect(find.byTooltip('Race actions'), findsOneWidget);
+    expect(find.byType(RecordingMapPreview), findsOneWidget);
 
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();

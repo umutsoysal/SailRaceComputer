@@ -8,6 +8,7 @@ import '../models/course.dart';
 import '../services/course_file.dart';
 import '../services/course_library.dart';
 import '../services/race_session_store.dart';
+import '../widgets/recording_map_preview.dart';
 
 enum LibraryContentMode { courses, recordings }
 
@@ -301,7 +302,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<_LibraryGrouping>(
-                      value: _grouping,
+                      initialValue: _grouping,
                       decoration: const InputDecoration(
                         isDense: true,
                         border: OutlineInputBorder(),
@@ -411,33 +412,73 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildRaceRow(RaceSessionEntry entry) {
-    return ListTile(
-      onTap: () => _viewRace(entry),
-      leading: const CircleAvatar(child: Icon(Icons.route_outlined)),
-      title: Text(entry.title),
-      subtitle: Text(entry.subtitle),
-      trailing: PopupMenuButton<String>(
-        tooltip: 'Race actions',
-        onSelected: (value) {
-          switch (value) {
-            case 'share':
-              _shareRace(entry);
-              break;
-            case 'remove':
-              _deleteRace(entry);
-              break;
-          }
-        },
-        itemBuilder: (context) => const [
-          PopupMenuItem(
-            value: 'share',
-            child: Text('Share GPX'),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _viewRace(entry),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              RecordingMapPreview(entry: entry),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            entry.title,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            entry.subtitle,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      tooltip: 'Race actions',
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'share':
+                            _shareRace(entry);
+                            break;
+                          case 'remove':
+                            _deleteRace(entry);
+                            break;
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(
+                          value: 'share',
+                          child: Text('Share GPX'),
+                        ),
+                        PopupMenuItem(
+                          value: 'remove',
+                          child: Text('Remove race'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          PopupMenuItem(
-            value: 'remove',
-            child: Text('Remove race'),
-          ),
-        ],
+        ),
       ),
     );
   }

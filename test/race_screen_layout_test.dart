@@ -283,15 +283,27 @@ void main() {
 
       expect(find.text('VMG to mark'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Finish and save race'));
+      await tester.tap(find.byKey(const Key('finish-race-button')));
       await tester.pumpAndSettle();
 
       expect(find.text('Finish race?'), findsOneWidget);
       expect(find.text('Keep racing'), findsOneWidget);
-      expect(find.text('Finish & save'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Finish & save'),
+        ),
+        findsOneWidget,
+      );
 
-      await tester.tap(find.text('Finish & save'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Finish & save'),
+        ),
+      );
       await _drainAsyncUi(tester);
+      await tester.pumpAndSettle();
 
       expect(find.text('Race saved'), findsOneWidget);
       expect(find.text('VMG to mark'), findsNothing);
@@ -315,17 +327,17 @@ void main() {
 
       expect(find.text('VMG to mark'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Finish and save race'));
+      await tester.tap(find.byKey(const Key('finish-race-button')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Keep racing'));
       await tester.pumpAndSettle();
 
       expect(find.text('Finish race?'), findsNothing);
       expect(find.text('VMG to mark'), findsOneWidget);
-      expect(find.byTooltip('Pause race'), findsOneWidget);
+      expect(find.byKey(const Key('finish-race-button')), findsOneWidget);
     });
 
-    testWidgets('pause switches control to resume without hiding metrics', (
+    testWidgets('active race shows one prominent finish button', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -336,14 +348,9 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
       await _drainAsyncUi(tester);
 
-      expect(find.byTooltip('Pause race'), findsOneWidget);
+      expect(find.byKey(const Key('finish-race-button')), findsOneWidget);
       expect(find.text('VMG to mark'), findsOneWidget);
-
-      await tester.tap(find.byTooltip('Pause race'));
-      await tester.pump();
-
-      expect(find.byTooltip('Resume race'), findsOneWidget);
-      expect(find.text('VMG to mark'), findsOneWidget);
+      expect(find.text('Finish & save'), findsWidgets);
     });
 
     testWidgets('starting a new race resets back to the first mark', (
@@ -358,11 +365,15 @@ void main() {
       await _drainAsyncUi(tester);
       await tester.tap(find.text('Next mark'));
       await tester.pump();
-      await tester.tap(find.byTooltip('Finish and save race'));
+      await tester.tap(find.byKey(const Key('finish-race-button')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Finish & save'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Finish & save'),
+        ),
+      );
       await _drainAsyncUi(tester);
-
       await tester.pumpAndSettle();
 
       await tester.tap(find.widgetWithText(FilledButton, 'Start new race'));
@@ -414,6 +425,8 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
     await _drainAsyncUi(tester);
+    await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
 
     expect(find.text('Race saved'), findsOneWidget);
     expect(find.textContaining('Saved 1 GPS point'), findsWidgets);

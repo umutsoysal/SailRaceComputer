@@ -145,10 +145,16 @@ void main() {
 
     await tester.tap(find.text('Race'));
     await _drainAsyncUi(tester);
-    await tester.tap(find.byTooltip('Finish and save race'));
+    await tester.tap(find.byKey(const Key('finish-race-button')));
     await _drainAsyncUi(tester);
-    await tester.tap(find.text('Finish & save'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Finish & save'),
+      ),
+    );
     await _drainAsyncUi(tester);
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(
       find.byKey(const Key('race-tab-recording-indicator')),
