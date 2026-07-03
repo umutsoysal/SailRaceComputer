@@ -348,8 +348,15 @@ class _RaceScreenState extends State<RaceScreen> {
         title: const Text('Race'),
         actions: [
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Auto-advance'),
+              const Text('Auto'),
+              Tooltip(
+                message:
+                    'Auto-advance steps to the next mark automatically when\n'
+                    'the boat enters the rounding radius.',
+                child: const Icon(Icons.info_outline, size: 16),
+              ),
               Switch(
                 value: _autoAdvance,
                 onChanged: (v) => setState(() => _autoAdvance = v),
@@ -467,6 +474,7 @@ class _RaceScreenState extends State<RaceScreen> {
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               key: const Key('race-course-picker'),
+              isExpanded: true,
               value: options.any((option) => option.key == selectedKey)
                   ? selectedKey
                   : null,
@@ -479,7 +487,10 @@ class _RaceScreenState extends State<RaceScreen> {
                   .map(
                     (option) => DropdownMenuItem<String>(
                       value: option.key,
-                      child: Text(option.label),
+                      child: Text(
+                        option.label,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   )
                   .toList(),
@@ -512,6 +523,18 @@ class _RaceScreenState extends State<RaceScreen> {
                   Icons.radio_button_checked,
                   'Radius ${mark.roundingRadiusM.toStringAsFixed(0)} m',
                 ),
+                if (_selectedCourse.buoys.length >= 2)
+                  _courseChip(
+                    Icons.straighten,
+                    () {
+                      double total = 0;
+                      final b = _selectedCourse.buoys;
+                      for (int i = 0; i < b.length - 1; i++) {
+                        total += distanceMeters(b[i].position, b[i + 1].position);
+                      }
+                      return '${metersToNm(total).toStringAsFixed(1)} NM total';
+                    }(),
+                  ),
               ],
             ),
             const SizedBox(height: 16),
@@ -596,12 +619,12 @@ class _RaceScreenState extends State<RaceScreen> {
         _RaceCourseOption(
           key: key,
           course: _copyCourse(course),
-          label: '${course.name} · $sourceLabel',
+          label: sourceLabel.isEmpty ? course.name : '${course.name} · $sourceLabel',
         ),
       );
     }
 
-    addOption(widget.course, 'current');
+    addOption(widget.course, '');
     for (final entry in _courseEntries) {
       addOption(entry.course, entry.isBundled ? 'bundled' : 'saved');
     }
@@ -710,7 +733,7 @@ class _RaceScreenState extends State<RaceScreen> {
                     ),
                     const SizedBox(height: 12),
                     _metric(
-                      'ETA at current VMG',
+                      'ETA',
                       etaSeconds == null
                           ? '--:--'
                           : formatEta(Duration(seconds: etaSeconds)),
@@ -856,7 +879,7 @@ class _RaceScreenState extends State<RaceScreen> {
                         ),
                         const SizedBox(height: 8),
                         _metric(
-                          'ETA at current VMG',
+                          'ETA',
                           etaSeconds == null
                               ? '--:--'
                               : formatEta(Duration(seconds: etaSeconds)),
