@@ -1025,48 +1025,12 @@ class _RaceScreenState extends State<RaceScreen> {
                         good: vmg > 0,
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _metric(
-                              'Distance',
-                              distance == null
-                                  ? '--'
-                                  : metersToNm(distance).toStringAsFixed(2),
-                              'NM',
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _metric(
-                              'Bearing',
-                              bearing == null
-                                  ? '--'
-                                  : '${bearing.toStringAsFixed(0)}°',
-                              bearing == null ? '' : compass(bearing),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _metric(
-                              'SOG',
-                              msToKnots(sog).toStringAsFixed(2),
-                              'kn',
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _metric(
-                              'COG',
-                              '${cog.toStringAsFixed(0)}°',
-                              compass(cog),
-                            ),
-                          ),
-                        ],
+                      _secondaryMetricsGrid(
+                        distance: distance,
+                        bearing: bearing,
+                        sog: sog,
+                        cog: cog,
+                        compactThreshold: 480,
                       ),
                       const SizedBox(height: 12),
                       _metric(
@@ -1077,12 +1041,7 @@ class _RaceScreenState extends State<RaceScreen> {
                         '',
                       ),
                       const SizedBox(height: 16),
-                      Text(
-                        'Fix: ${fix.latitude.toStringAsFixed(5)}, '
-                        '${fix.longitude.toStringAsFixed(5)}  '
-                        '±${fix.accuracy.toStringAsFixed(0)} m',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+                      _fixSummary(fix),
                     ],
                   ],
                 ),
@@ -1113,6 +1072,24 @@ class _RaceScreenState extends State<RaceScreen> {
     required double vmg,
     required int? etaSeconds,
   }) {
+    final screenSize = MediaQuery.sizeOf(context);
+    final compactLandscape =
+        screenSize.width < 760 || screenSize.height < 420;
+    if (compactLandscape) {
+      return _buildCompactLandscapeBody(
+        key: key,
+        mark: mark,
+        fix: fix,
+        buoys: buoys,
+        distance: distance,
+        bearing: bearing,
+        sog: sog,
+        cog: cog,
+        vmg: vmg,
+        etaSeconds: etaSeconds,
+      );
+    }
+
     return KeyedSubtree(
       key: key,
       child: Row(
@@ -1174,48 +1151,13 @@ class _RaceScreenState extends State<RaceScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _metric(
-                                  'Distance',
-                                  distance == null
-                                      ? '--'
-                                      : metersToNm(distance).toStringAsFixed(2),
-                                  'NM',
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _metric(
-                                  'Bearing',
-                                  bearing == null
-                                      ? '--'
-                                      : '${bearing.toStringAsFixed(0)}°',
-                                  bearing == null ? '' : compass(bearing),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _metric(
-                                  'SOG',
-                                  msToKnots(sog).toStringAsFixed(2),
-                                  'kn',
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _metric(
-                                  'COG',
-                                  '${cog.toStringAsFixed(0)}°',
-                                  compass(cog),
-                                ),
-                              ),
-                            ],
+                          _secondaryMetricsGrid(
+                            distance: distance,
+                            bearing: bearing,
+                            sog: sog,
+                            cog: cog,
+                            compactThreshold: 420,
+                            spacing: 8,
                           ),
                           const SizedBox(height: 8),
                           _metric(
@@ -1226,18 +1168,82 @@ class _RaceScreenState extends State<RaceScreen> {
                             '',
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            'Fix: ${fix.latitude.toStringAsFixed(5)}, '
-                            '${fix.longitude.toStringAsFixed(5)}  '
-                            '±${fix.accuracy.toStringAsFixed(0)} m',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
+                          _fixSummary(fix),
                         ],
                       ),
                     ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCompactLandscapeBody({
+    Key? key,
+    required Buoy mark,
+    required Position? fix,
+    required List<Buoy> buoys,
+    required double? distance,
+    required double? bearing,
+    required double sog,
+    required double cog,
+    required double vmg,
+    required int? etaSeconds,
+  }) {
+    return KeyedSubtree(
+      key: key,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _markHeader(mark),
+                    const SizedBox(height: 12),
+                    if (_displayError != null)
+                      _errorCard(_displayError!)
+                    else if (fix == null)
+                      const _Waiting()
+                    else ...[
+                      _bigMetric(
+                        label: 'VMG to mark',
+                        value: msToKnots(vmg).toStringAsFixed(2),
+                        unit: 'kn',
+                        good: vmg > 0,
+                      ),
+                      const SizedBox(height: 10),
+                      _secondaryMetricsGrid(
+                        distance: distance,
+                        bearing: bearing,
+                        sog: sog,
+                        cog: cog,
+                        compactThreshold: 560,
+                        spacing: 10,
+                      ),
+                      const SizedBox(height: 10),
+                      _metric(
+                        'ETA at current VMG',
+                        etaSeconds == null
+                            ? '--:--'
+                            : formatEta(Duration(seconds: etaSeconds)),
+                        '',
+                      ),
+                      const SizedBox(height: 10),
+                      _fixSummary(fix),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            _navButtons(buoys),
+          ],
+        ),
       ),
     );
   }
@@ -1465,21 +1471,26 @@ class _RaceScreenState extends State<RaceScreen> {
           children: [
             Text(label, style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 4),
-            Wrap(
-              alignment: WrapAlignment.center,
-              crossAxisAlignment: WrapCrossAlignment.end,
-              spacing: 8,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 56,
-                    fontWeight: FontWeight.w700,
-                    color: color,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 56,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
                   ),
-                ),
-                Text(unit, style: TextStyle(fontSize: 22, color: color)),
-              ],
+                  if (unit.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Text(unit, style: TextStyle(fontSize: 22, color: color)),
+                  ],
+                ],
+              ),
             ),
           ],
         ),
@@ -1500,9 +1511,14 @@ class _RaceScreenState extends State<RaceScreen> {
           children: [
             Text(label, style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w700),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style:
+                    const TextStyle(fontSize: 40, fontWeight: FontWeight.w700),
+              ),
             ),
             if (direction.isNotEmpty) ...[
               const SizedBox(height: 4),
@@ -1524,26 +1540,113 @@ class _RaceScreenState extends State<RaceScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: Theme.of(context).textTheme.labelMedium),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
             const SizedBox(height: 4),
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.end,
-              spacing: 6,
-              runSpacing: 4,
-              children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w600,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                Text(unit, style: Theme.of(context).textTheme.bodyMedium),
-              ],
+                  if (unit.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    Text(unit, style: Theme.of(context).textTheme.bodyMedium),
+                  ],
+                ],
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _secondaryMetricsGrid({
+    required double? distance,
+    required double? bearing,
+    required double sog,
+    required double cog,
+    required double compactThreshold,
+    double spacing = 12,
+  }) {
+    final tiles = <Widget>[
+      _metric(
+        'Distance',
+        distance == null ? '--' : metersToNm(distance).toStringAsFixed(2),
+        'NM',
+      ),
+      _metric(
+        'Bearing',
+        bearing == null ? '--' : '${bearing.toStringAsFixed(0)}°',
+        bearing == null ? '' : compass(bearing),
+      ),
+      _metric(
+        'SOG',
+        msToKnots(sog).toStringAsFixed(2),
+        'kn',
+      ),
+      _metric(
+        'COG',
+        '${cog.toStringAsFixed(0)}°',
+        compass(cog),
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < compactThreshold) {
+          return Column(
+            children: [
+              for (var i = 0; i < tiles.length; i++) ...[
+                tiles[i],
+                if (i < tiles.length - 1) SizedBox(height: spacing),
+              ],
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(child: tiles[0]),
+                SizedBox(width: spacing),
+                Expanded(child: tiles[1]),
+              ],
+            ),
+            SizedBox(height: spacing),
+            Row(
+              children: [
+                Expanded(child: tiles[2]),
+                SizedBox(width: spacing),
+                Expanded(child: tiles[3]),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _fixSummary(Position fix) {
+    return Text(
+      'Fix: ${fix.latitude.toStringAsFixed(5)}, '
+      '${fix.longitude.toStringAsFixed(5)}  '
+      '±${fix.accuracy.toStringAsFixed(0)} m',
+      style: Theme.of(context).textTheme.bodySmall,
     );
   }
 

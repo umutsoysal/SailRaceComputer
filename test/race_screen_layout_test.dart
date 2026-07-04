@@ -248,6 +248,37 @@ void main() {
       expect(find.widgetWithText(FilledButton, 'Start race'), findsOneWidget);
     });
 
+    testWidgets('shows COG and SOG cleanly on compact landscape after start', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = compactLandscape;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        _buildRaceScreen(
+          course: course,
+          fix: fix,
+          screenSize: compactLandscape,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.widgetWithText(FilledButton, 'Start race'),
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
+      await _drainAsyncUi(tester);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('SOG'), findsOneWidget);
+      expect(find.text('COG'), findsOneWidget);
+      expect(find.text('ETA at current VMG'), findsOneWidget);
+    });
+
     testWidgets('VMG widget is horizontally centred (in the middle column)', (
       tester,
     ) async {
