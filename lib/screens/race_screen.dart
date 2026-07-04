@@ -919,16 +919,22 @@ class _RaceScreenState extends State<RaceScreen> {
   }
 
   Widget _finishRaceButton() {
-    return FilledButton.icon(
-      key: const Key('finish-race-button'),
-      onPressed: _finishingRace ? null : _confirmAndFinishRace,
-      icon: const Icon(Icons.flag),
-      label: const Text('Finish & save'),
-      style: FilledButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        textStyle: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
+    return Align(
+      alignment: Alignment.centerRight,
+      child: FilledButton.tonalIcon(
+        key: const Key('finish-race-button'),
+        onPressed: _finishingRace ? null : _confirmAndFinishRace,
+        icon: const Icon(Icons.flag_outlined, size: 18),
+        label: const Text('Finish'),
+        style: FilledButton.styleFrom(
+          visualDensity: VisualDensity.compact,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );

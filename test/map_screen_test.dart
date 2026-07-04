@@ -113,6 +113,28 @@ class _RecoveryOnlyPositionSource implements PositionSource {
 }
 
 void main() {
+  testWidgets('shows the course name in the map app bar', (tester) async {
+    final course = Course(
+      name: 'Wednesday Series',
+      buoys: [
+        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapScreen(
+          course: course,
+          positionSource: _ErrorPositionSource('temporary'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Map'), findsOneWidget);
+    expect(find.text('Wednesday Series'), findsOneWidget);
+  });
+
   testWidgets('shows actionable permission error instead of waiting chip', (
     tester,
   ) async {
@@ -166,6 +188,44 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(InteractiveViewer), findsOneWidget);
+  });
+
+  testWidgets('fit button resets the map transform to the fitted view', (
+    tester,
+  ) async {
+    final course = Course(
+      name: 'Wednesday Series',
+      buoys: [
+        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
+        Buoy(name: 'Finish', position: const LatLng(41.89, -87.61)),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapScreen(
+          course: course,
+          positionSource: _ErrorPositionSource('temporary'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final viewer = tester.widget<InteractiveViewer>(
+      find.byType(InteractiveViewer),
+    );
+    final controller = viewer.transformationController!;
+    controller.value = Matrix4.identity()
+      ..translateByDouble(48.0, -36.0, 0.0, 1.0)
+      ..scaleByDouble(1.8, 1.8, 1.0, 1.0);
+    await tester.pump();
+
+    expect(controller.value, isNot(Matrix4.identity()));
+
+    await tester.tap(find.byKey(const Key('map-fit-button')));
+    await tester.pump();
+
+    expect(controller.value, equals(Matrix4.identity()));
   });
 
   testWidgets('ignores transient iOS location-unknown stream errors', (

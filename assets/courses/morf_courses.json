@@ -1,0 +1,221 @@
+{
+  "format": "sail-race-course",
+  "version": 2,
+  "name": "MORF Courses 2026",
+  "createdAt": "2026-06-27T00:00:00Z",
+  "organizingAuthority": { "name": "MORF", "city": "Chicago", "state": "Illinois", "country": "USA" },
+  "raceInfo": { "defaultRounding": "PORT" },
+  "buoys": [
+    { "id": "SA7", "name": "SA7 Start/Finish", "lat": 41.852833, "lng": -87.556833, "roundingRadiusM": 30 },
+    { "id": "1",   "name": "Mark 1",           "lat": 41.871000, "lng": -87.556833, "roundingRadiusM": 25 },
+    { "id": "2",   "name": "Mark 2",           "lat": 41.865667, "lng": -87.539500, "roundingRadiusM": 25 },
+    { "id": "3",   "name": "Mark 3",           "lat": 41.852833, "lng": -87.532500, "roundingRadiusM": 25 },
+    { "id": "4",   "name": "Mark 4",           "lat": 41.840000, "lng": -87.539500, "roundingRadiusM": 25 },
+    { "id": "5",   "name": "Mark 5",           "lat": 41.834667, "lng": -87.556833, "roundingRadiusM": 25 },
+    { "id": "6",   "name": "Mark 6",           "lat": 41.840000, "lng": -87.574000, "roundingRadiusM": 25 },
+    { "id": "7",   "name": "Mark 7",           "lat": 41.852833, "lng": -87.581167, "roundingRadiusM": 25 },
+    { "id": "8",   "name": "Mark 8",           "lat": 41.865667, "lng": -87.574000, "roundingRadiusM": 25 }
+  ],
+  "courses": [
+    {
+      "id": "O1", "name": "Olympic O1", "type": "Olympic", "distanceNm": 9.62,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "1",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "7",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "5",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "1",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "5",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "O2", "name": "Olympic O2", "type": "Olympic", "distanceNm": 9.62,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "2",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "8",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "6",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "2",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "6",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "O3", "name": "Olympic O3", "type": "Olympic", "distanceNm": 9.62,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "3",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "1",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "7",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "3",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "7",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "O4", "name": "Olympic O4", "type": "Olympic", "distanceNm": 9.62,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "4",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "2",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "8",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "4",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "8",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "O5", "name": "Olympic O5", "type": "Olympic", "distanceNm": 9.62,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "5",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "3",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "1",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "5",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "1",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "O6", "name": "Olympic O6", "type": "Olympic", "distanceNm": 9.62,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "6",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "4",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "2",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "6",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "2",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "O7", "name": "Olympic O7", "type": "Olympic", "distanceNm": 9.62,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "7",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "5",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "3",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "7",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "3",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "O8", "name": "Olympic O8", "type": "Olympic", "distanceNm": 9.62,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "8",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "6",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "4",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "8",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "4",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "P1", "name": "Trapezoidal P1", "type": "Trapezoidal", "distanceNm": 8.48,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "1",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "8",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "6",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "8",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "6",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "5",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "P2", "name": "Trapezoidal P2", "type": "Trapezoidal", "distanceNm": 8.48,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "2",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "1",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "7",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "1",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "7",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "6",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "P3", "name": "Trapezoidal P3", "type": "Trapezoidal", "distanceNm": 8.48,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "3",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "2",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "8",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "2",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "8",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "7",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "P4", "name": "Trapezoidal P4", "type": "Trapezoidal", "distanceNm": 8.48,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "4",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "3",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "1",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "3",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "1",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "8",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "P5", "name": "Trapezoidal P5", "type": "Trapezoidal", "distanceNm": 8.48,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "5",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "4",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "2",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "4",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "2",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "1",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "P6", "name": "Trapezoidal P6", "type": "Trapezoidal", "distanceNm": 8.48,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "6",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "5",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "3",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "5",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "3",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "2",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "P7", "name": "Trapezoidal P7", "type": "Trapezoidal", "distanceNm": 8.48,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "7",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "6",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "4",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "6",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "4",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "3",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    },
+    {
+      "id": "P8", "name": "Trapezoidal P8", "type": "Trapezoidal", "distanceNm": 8.48,
+      "turns": [
+        { "buoyId": "SA7", "role": "start" },
+        { "buoyId": "8",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "7",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "5",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "7",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "5",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "4",   "role": "round", "rounding": "PORT" },
+        { "buoyId": "SA7", "role": "finish" }
+      ]
+    }
+  ]
+}

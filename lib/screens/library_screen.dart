@@ -41,6 +41,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   bool _loading = true;
   late LibraryContentMode _filter;
   _LibraryGrouping _grouping = _LibraryGrouping.defaultView;
+  String? _groupFilter;
 
   @override
   void initState() {
@@ -65,6 +66,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       _courseEntries = courses;
       _raceEntries = races;
       _loading = false;
+      _syncGroupFilter();
     });
   }
 
@@ -171,6 +173,40 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return entry.name;
   }
 
+  String _groupKeyForRace(RaceSessionEntry entry) => entry.title;
+
+  List<String> _availableGroupFilters() {
+    final values = switch (_filter) {
+      LibraryContentMode.courses => _courseEntries.map(_groupKeyForCourse),
+      LibraryContentMode.recordings => _raceEntries.map(_groupKeyForRace),
+    };
+    final unique = values.toSet().toList()..sort();
+    return unique;
+  }
+
+  void _syncGroupFilter() {
+    final options = _availableGroupFilters();
+    if (_groupFilter != null && !options.contains(_groupFilter)) {
+      _groupFilter = null;
+    }
+  }
+
+  List<CourseEntry> _applyCourseFilter(List<CourseEntry> entries) {
+    final filter = _groupFilter;
+    if (filter == null) return entries;
+    return entries
+        .where((entry) => _groupKeyForCourse(entry) == filter)
+        .toList(growable: false);
+  }
+
+  List<RaceSessionEntry> _applyRaceFilter(List<RaceSessionEntry> entries) {
+    final filter = _groupFilter;
+    if (filter == null) return entries;
+    return entries
+        .where((entry) => _groupKeyForRace(entry) == filter)
+        .toList(growable: false);
+  }
+
   Map<String, List<CourseEntry>> _groupCoursesByName(
       List<CourseEntry> entries) {
     final grouped = <String, List<CourseEntry>>{};
@@ -206,9 +242,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final saved = _courseEntries.where((entry) => !entry.isBundled).toList();
     final showRaces = _filter == LibraryContentMode.recordings;
     final showCourses = _filter == LibraryContentMode.courses;
-    final visibleRaces = showRaces ? _raceEntries : const <RaceSessionEntry>[];
-    final visibleSaved = showCourses ? saved : const <CourseEntry>[];
-    final visibleBundled = showCourses ? bundled : const <CourseEntry>[];
+    final visibleRaces =
+        showRaces ? _applyRaceFilter(_raceEntries) : const <RaceSessionEntry>[];
+    final visibleSaved =
+        showCourses ? _applyCourseFilter(saved) : const <CourseEntry>[];
+    final visibleBundled =
+        showCourses ? _applyCourseFilter(bundled) : const <CourseEntry>[];
     final hasAnyEntries = visibleBundled.isNotEmpty ||
         visibleSaved.isNotEmpty ||
         visibleRaces.isNotEmpty;
@@ -266,6 +305,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _libraryControls() {
+    final groupOptions = _availableGroupFilters();
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Card(
@@ -288,43 +328,74 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   ],
                   selected: {_filter},
                   onSelectionChanged: (selection) {
-                    setState(() => _filter = selection.first);
+                    setState(() {
+                      _filter = selection.first;
+                      _syncGroupFilter();
+                    });
                   },
                 ),
                 const SizedBox(height: 12),
               ],
-              Row(
-                children: [
-                  Text(
-                    'Group by',
-                    style: Theme.of(context).textTheme.labelLarge,
+              Text(
+                'Group by',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<_LibraryGrouping>(
+                initialValue: _grouping,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: _LibraryGrouping.defaultView,
+                    child: Text('Default'),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<_LibraryGrouping>(
-                      initialValue: _grouping,
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: _LibraryGrouping.defaultView,
-                          child: Text('Default'),
-                        ),
-                        DropdownMenuItem(
-                          value: _LibraryGrouping.name,
-                          child: Text('Name'),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => _grouping = value);
-                      },
-                    ),
+                  DropdownMenuItem(
+                    value: _LibraryGrouping.name,
+                    child: Text('Name'),
                   ),
                 ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _grouping = value);
+                },
               ),
+              if (groupOptions.length > 1) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Filter',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String?>(
+                  key: const Key('library-group-filter'),
+                  initialValue: _groupFilter,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                  hint: const Text('All groups'),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('All groups'),
+                    ),
+                    ...groupOptions.map(
+                      (value) => DropdownMenuItem<String?>(
+                        value: value,
+                        child: Text(value, overflow: TextOverflow.ellipsis),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _groupFilter = value);
+                  },
+                ),
+              ],
             ],
           ),
         ),

@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+
 import '../models/course.dart';
 import '../services/app_analytics.dart';
 import '../services/course_file.dart';
@@ -9,106 +12,237 @@ import '../services/course_library.dart';
 import '../utils/geo.dart';
 import '../widgets/imported_course_picker_dialog.dart';
 
-/// Course setup screen — manage the list of buoys for the race.
+/// Course setup screen — starts with a simple course list and opens a focused
+/// editor only when the user chooses to create or edit a course.
 class CourseScreen extends StatefulWidget {
-  final Course course;
-  final ValueChanged<Course> onChanged;
-
   const CourseScreen({
     super.key,
     required this.course,
     required this.onChanged,
   });
 
+  final Course course;
+  final ValueChanged<Course> onChanged;
+
   @override
   State<CourseScreen> createState() => _CourseScreenState();
 }
 
 class _CourseScreenState extends State<CourseScreen> {
-  late Course _course;
   final _library = CourseLibrary();
+
+  late Course _course;
+  List<CourseEntry> _entries = const [];
+  bool _loading = true;
+  String? _groupFilter;
 
   @override
   void initState() {
     super.initState();
-    _course = widget.course;
+    _course = _copyCourse(widget.course);
+    unawaited(_reloadEntries());
   }
 
   @override
   void didUpdateWidget(covariant CourseScreen old) {
     super.didUpdateWidget(old);
     if (!identical(old.course, widget.course)) {
-      _course = widget.course;
+      _course = _copyCourse(widget.course);
     }
   }
 
-  void _commit() => widget.onChanged(_course);
+  String _courseFingerprint(Course course) => course.encode();
 
-  Future<void> _addOrEdit({Buoy? existing, int? index}) async {
-    final result = await showDialog<Buoy>(
-      context: context,
-      builder: (_) => _BuoyDialog(buoy: existing),
-    );
-    if (result == null) return;
-    setState(() {
-      if (index == null) {
-        _course.buoys.add(result);
-      } else {
-        _course.buoys[index] = result;
+  Course _copyCourse(Course course) => Course.decode(course.encode());
+
+  void _commit() => widget.onChanged(_copyCourse(_course));
+
+  CourseEntry? get _activeEntry {
+    final fingerprint = _courseFingerprint(_course);
+    for (final entry in _entries) {
+      if (_courseFingerprint(entry.course) == fingerprint) {
+        return entry;
       }
+    }
+    return null;
+  }
+
+  bool get _isEmptyDraft => _activeEntry == null && _course.buoys.isEmpty;
+
+  List<CourseEntry> get _savedEntries =>
+      _entries.where((entry) => !entry.isBundled).toList(growable: false)
+        ..sort((a, b) => a.name.compareTo(b.name));
+
+  List<CourseEntry> get _bundledEntries =>
+      _entries.where((entry) => entry.isBundled).toList(growable: false)
+        ..sort((a, b) => a.name.compareTo(b.name));
+
+  String _groupKeyForCourse(CourseEntry entry) {
+    final groupName = entry.groupName?.trim();
+    if (groupName != null && groupName.isNotEmpty) {
+      return groupName;
+    }
+    return entry.name;
+  }
+
+  List<String> _availableGroupFilters([List<CourseEntry>? entries]) {
+    final source = entries ?? _entries;
+    final unique = source.map(_groupKeyForCourse).toSet().toList()..sort();
+    return unique;
+  }
+
+  void _syncGroupFilter([List<CourseEntry>? entries]) {
+    final options = _availableGroupFilters(entries);
+    if (_groupFilter != null && !options.contains(_groupFilter)) {
+      _groupFilter = null;
+    }
+  }
+
+  List<CourseEntry> _applyCourseFilter(List<CourseEntry> entries) {
+    final filter = _groupFilter;
+    if (filter == null) return entries;
+    return entries
+        .where((entry) => _groupKeyForCourse(entry) == filter)
+        .toList(growable: false);
+  }
+
+  Future<void> _reloadEntries() async {
+    final entries = await _library.listAll();
+    if (!mounted) return;
+    setState(() {
+      _entries = entries;
+      _loading = false;
+      _syncGroupFilter(entries);
     });
-    _commit();
   }
 
-  void _remove(int i) {
-    setState(() => _course.buoys.removeAt(i));
-    _commit();
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
-  void _rename() async {
-    final controller = TextEditingController(text: _course.name);
+  Future<void> _selectEntry(CourseEntry entry) async {
+    setState(() => _course = _copyCourse(entry.course));
+    _commit();
+    _snack('Selected "${entry.name}".');
+  }
+
+  Future<void> _createCourse({bool openEditor = true}) async {
+    final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Course name'),
-        content: TextField(controller: controller, autofocus: true),
+        title: const Text('New course'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Course name'),
+          onSubmitted: (value) {
+            final trimmed = value.trim();
+            if (trimmed.isNotEmpty) Navigator.pop(ctx, trimmed);
+          },
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Save'),
+            onPressed: () {
+              final trimmed = controller.text.trim();
+              if (trimmed.isNotEmpty) Navigator.pop(ctx, trimmed);
+            },
+            child: const Text('Create'),
           ),
         ],
       ),
     );
-    if (name == null || name.isEmpty) return;
-    setState(() => _course.name = name);
+    if (name == null) return;
+
+    final created = await _library.save(Course(name: name, buoys: []));
+    AppAnalytics.instance.logCourseSaved(
+      buoyCount: 0,
+      source: 'course_create',
+    );
+    await _reloadEntries();
+    if (!mounted) return;
+    setState(() => _course = _copyCourse(created.course));
     _commit();
+    if (openEditor) {
+      await _editCourseEntry(created);
+    }
   }
 
-  Future<void> _exportShare() async {
-    final json = CourseFile.encode(_course);
-    final filename = CourseFile.suggestedFileName(_course);
+  Future<void> _editCurrentCourse() async {
+    if (_isEmptyDraft) {
+      await _createCourse();
+      return;
+    }
+    await _editCourseEntry(_activeEntry);
+  }
+
+  Future<void> _editCourseEntry(CourseEntry? sourceEntry) async {
+    final initialCourse = sourceEntry?.course ?? _course;
+    final edited = await Navigator.of(context).push<Course>(
+      MaterialPageRoute(
+        builder: (_) => _CourseEditorPage(
+          course: _copyCourse(initialCourse),
+          isBundledTemplate: sourceEntry?.isBundled ?? false,
+        ),
+      ),
+    );
+    if (edited == null) return;
+    await _persistEditedCourse(edited, sourceEntry: sourceEntry);
+  }
+
+  Future<void> _persistEditedCourse(
+    Course edited, {
+    CourseEntry? sourceEntry,
+  }) async {
+    final overwriteId =
+        sourceEntry != null && !sourceEntry.isBundled ? sourceEntry.id : null;
+    final saved = await _library.save(edited, id: overwriteId);
+    AppAnalytics.instance.logCourseSaved(
+      buoyCount: edited.buoys.length,
+      source: overwriteId == null ? 'course_create' : 'course_editor',
+    );
+    await _reloadEntries();
+    if (!mounted) return;
+    setState(() => _course = _copyCourse(saved.course));
+    _commit();
+    _snack(
+      overwriteId == null
+          ? 'Saved "${saved.name}" to courses.'
+          : 'Updated "${saved.name}".',
+    );
+  }
+
+  Future<void> _shareCourse(Course course) async {
+    final json = CourseFile.encode(course);
+    final filename = CourseFile.suggestedFileName(course);
     try {
       await SharePlus.instance.share(
         ShareParams(
           text: json,
-          subject: _course.name,
+          subject: course.name,
           fileNameOverrides: [filename],
         ),
       );
-    } catch (e) {
-      if (!mounted) return;
-      _snack('Share failed: $e');
+    } catch (error) {
+      _snack('Share failed: $error');
     }
   }
 
-  Future<void> _exportShowJson() async {
+  Future<void> _shareCurrentCourse() async {
+    if (_isEmptyDraft) return;
+    await _shareCourse(_course);
+  }
+
+  Future<void> _showCurrentCourseJson() async {
+    if (_isEmptyDraft || !mounted) return;
     final json = CourseFile.encode(_course);
-    if (!mounted) return;
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -132,7 +266,7 @@ class _CourseScreenState extends State<CourseScreen> {
             label: const Text('Share file'),
             onPressed: () {
               Navigator.pop(ctx);
-              _exportShare();
+              _shareCurrentCourse();
             },
           ),
         ],
@@ -156,17 +290,18 @@ class _CourseScreenState extends State<CourseScreen> {
       final bytes = await file.readAsBytes();
       final json = utf8.decode(bytes);
       final bundle = CourseFile.decodeBundle(json);
+      if (!mounted) return;
       final selected = await pickImportedCourse(
         context,
         bundle,
         sourceName: file.name,
       );
       if (selected == null) return;
-      await _applyImported(selected.course, sourceName: file.name);
-    } on CourseFileException catch (e) {
-      _snack('Invalid course file: $e');
-    } catch (e) {
-      _snack('Import failed: $e');
+      await _saveImportedCourse(selected.course, sourceName: file.name);
+    } on CourseFileException catch (error) {
+      _snack('Invalid course file: $error');
+    } catch (error) {
+      _snack('Import failed: $error');
     }
   }
 
@@ -205,287 +340,540 @@ class _CourseScreenState extends State<CourseScreen> {
     if (text == null || text.trim().isEmpty) return;
     try {
       final bundle = CourseFile.decodeBundle(text);
+      if (!mounted) return;
       final selected = await pickImportedCourse(
         context,
         bundle,
         sourceName: 'pasted JSON',
       );
       if (selected == null) return;
-      await _applyImported(selected.course, sourceName: 'pasted JSON');
-    } on CourseFileException catch (e) {
-      _snack('Invalid course file: $e');
+      await _saveImportedCourse(selected.course, sourceName: 'pasted JSON');
+    } on CourseFileException catch (error) {
+      _snack('Invalid course file: $error');
     }
   }
 
-  Future<void> _applyImported(Course imported, {String? sourceName}) async {
-    if (!mounted) return;
-    if (_course.buoys.isEmpty) {
-      await _library.save(imported);
-      setState(() => _course = imported);
-      _commit();
-      _snack('Loaded "${imported.name}" (${imported.buoys.length} buoys).');
-      return;
-    }
-    final from = sourceName == null ? '' : ' from $sourceName';
-    final choice = await showDialog<_ImportChoice>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Import course'),
-        content: Text(
-          'Import "${imported.name}" (${imported.buoys.length} marks)$from.\n\n'
-          'Replace your current course, or load it as a new course alongside the current one?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          OutlinedButton(
-            onPressed: () => Navigator.pop(ctx, _ImportChoice.replace),
-            child: const Text('Replace current'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, _ImportChoice.addNew),
-            child: const Text('New course'),
-          ),
-        ],
-      ),
-    );
-    if (choice == null) return;
-    if (choice == _ImportChoice.addNew) {
-      // Preserve the current course so the user can switch back.
-      await _library.save(_course);
-    }
-    await _library.save(imported);
-    setState(() => _course = imported);
-    _commit();
-    _snack('Loaded "${imported.name}" (${imported.buoys.length} buoys).');
-  }
-
-  void _snack(String msg) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-  }
-
-  Future<void> _saveCurrentToLibrary() async {
-    await _library.save(_course);
+  Future<void> _saveImportedCourse(
+    Course imported, {
+    required String sourceName,
+  }) async {
+    final saved = await _library.save(imported);
     AppAnalytics.instance.logCourseSaved(
-      buoyCount: _course.buoys.length,
-      source: 'course_editor',
+      buoyCount: imported.buoys.length,
+      source: 'course_import',
     );
-    _snack('Saved "${_course.name}" to library.');
-  }
-
-  Future<void> _newCourse() async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('New course'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Course name'),
-          onSubmitted: (v) {
-            if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final n = controller.text.trim();
-              if (n.isNotEmpty) Navigator.pop(ctx, n);
-            },
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
-    if (name == null) return;
-    if (_course.buoys.isNotEmpty) await _library.save(_course);
-    setState(() => _course = Course(name: name, buoys: []));
+    await _reloadEntries();
+    if (!mounted) return;
+    setState(() => _course = _copyCourse(saved.course));
     _commit();
+    _snack('Imported "${saved.name}" from $sourceName.');
   }
 
-  Future<void> _exportShareEntry(CourseEntry e) async {
-    final json = CourseFile.encode(e.course);
-    final filename = CourseFile.suggestedFileName(e.course);
-    try {
-      await SharePlus.instance.share(
-        ShareParams(text: json, subject: e.name, fileNameOverrides: [filename]),
-      );
-    } catch (err) {
-      if (!mounted) return;
-      _snack('Share failed: $err');
+  Future<void> _deleteCourseEntry(CourseEntry entry) async {
+    final removingActive = _activeEntry?.id == entry.id;
+    await _library.remove(entry.id);
+    await _reloadEntries();
+    if (!mounted) return;
+    if (removingActive) {
+      final fallbackEntries = [..._savedEntries, ..._bundledEntries];
+      final fallbackCourse = fallbackEntries.isNotEmpty
+          ? _copyCourse(fallbackEntries.first.course)
+          : Course(name: 'My Course', buoys: []);
+      setState(() => _course = fallbackCourse);
+      _commit();
+    }
+    _snack('Removed "${entry.name}" from courses.');
+  }
+
+  void _handleCourseMenuSelection(CourseEntry entry, String value) {
+    switch (value) {
+      case 'edit':
+        unawaited(_editCourseEntry(entry));
+        break;
+      case 'share':
+        unawaited(_shareCourse(entry.course));
+        break;
+      case 'delete':
+        unawaited(_deleteCourseEntry(entry));
+        break;
     }
   }
 
-  Future<void> _openLibrary() async {
-    AppAnalytics.instance.logLibraryOpened(source: 'course_editor');
-    final entries = await _library.listAll();
-    if (!mounted) return;
-    final action = await showModalBottomSheet<_LibraryAction>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (ctx) => _LibrarySheet(entries: entries),
-    );
-    if (action == null) return;
-    switch (action.kind) {
-      case _LibraryActionKind.loadCourse:
-        _applyImported(
-          action.courseEntry!.course,
-          sourceName: action.courseEntry!.isBundled ? 'bundled' : 'library',
-        );
+  void _handleTopMenuSelection(String value) {
+    switch (value) {
+      case 'import_file':
+        unawaited(_importFromFile());
         break;
-      case _LibraryActionKind.shareCourse:
-        _exportShareEntry(action.courseEntry!);
+      case 'import_paste':
+        unawaited(_importFromPaste());
         break;
-      case _LibraryActionKind.deleteCourse:
-        await _library.remove(action.courseEntry!.id);
-        _snack('Removed "${action.courseEntry!.name}" from library.');
+      case 'share_current':
+        unawaited(_shareCurrentCourse());
         break;
-      case _LibraryActionKind.newCourse:
-        _newCourse();
+      case 'view_json':
+        unawaited(_showCurrentCourseJson());
         break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final saved = _applyCourseFilter(_savedEntries);
+    final bundled = _applyCourseFilter(_bundledEntries);
+    final groupOptions = _availableGroupFilters();
+    final hasEntries = saved.isNotEmpty || bundled.isNotEmpty;
+
     return Scaffold(
       appBar: AppBar(
+        title: const Text('Courses'),
+        actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Course options',
+            icon: const Icon(Icons.more_vert),
+            onSelected: _handleTopMenuSelection,
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'import_file',
+                child: ListTile(
+                  leading: Icon(Icons.folder_open),
+                  title: Text('Import from file'),
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'import_paste',
+                child: ListTile(
+                  leading: Icon(Icons.paste),
+                  title: Text('Import pasted JSON'),
+                ),
+              ),
+              if (!_isEmptyDraft) ...[
+                const PopupMenuDivider(),
+                const PopupMenuItem(
+                  value: 'share_current',
+                  child: ListTile(
+                    leading: Icon(Icons.ios_share),
+                    title: Text('Share current course'),
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'view_json',
+                  child: ListTile(
+                    leading: Icon(Icons.code),
+                    title: Text('View current JSON'),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              children: [
+                _selectedCourseCard(context),
+                const SizedBox(height: 16),
+                if (groupOptions.length > 1) ...[
+                  _courseFilterBar(context, groupOptions),
+                  const SizedBox(height: 16),
+                ],
+                if (!hasEntries)
+                  _emptyState(context)
+                else ...[
+                  if (saved.isNotEmpty) ...[
+                    _sectionHeader(context, 'Saved Courses'),
+                    ...saved.map((entry) => _courseRow(context, entry)),
+                  ],
+                  if (bundled.isNotEmpty) ...[
+                    _sectionHeader(context, 'Bundled Courses'),
+                    ...bundled.map((entry) => _courseRow(context, entry)),
+                  ],
+                ],
+              ],
+            ),
+    );
+  }
+
+  Widget _courseFilterBar(BuildContext context, List<String> groupOptions) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Filter', style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String?>(
+          key: const Key('course-group-filter'),
+          initialValue: _groupFilter,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            isDense: true,
+            border: OutlineInputBorder(),
+          ),
+          hint: const Text('All groups'),
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('All groups'),
+            ),
+            ...groupOptions.map(
+              (value) => DropdownMenuItem<String?>(
+                value: value,
+                child: Text(value, overflow: TextOverflow.ellipsis),
+              ),
+            ),
+          ],
+          onChanged: (value) {
+            setState(() => _groupFilter = value);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _selectedCourseCard(BuildContext context) {
+    final activeEntry = _activeEntry;
+    final isBundled = activeEntry?.isBundled ?? false;
+    final title =
+        _isEmptyDraft ? 'Choose a course to get started' : _course.name;
+    final subtitle = _isEmptyDraft
+        ? 'Start with a bundled course, import one, or create your own.'
+        : '${_course.buoys.length} mark${_course.buoys.length == 1 ? '' : 's'}'
+            '${activeEntry == null ? ' · draft' : isBundled ? ' · bundled' : ' · saved'}';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Selected course',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(title, style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            if (isBundled) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Editing this course will save your own copy.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                FilledButton.icon(
+                  onPressed: _editCurrentCourse,
+                  icon: Icon(_isEmptyDraft ? Icons.add : Icons.edit_outlined),
+                  label: Text(_isEmptyDraft ? 'Create course' : 'Edit course'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _createCourse(openEditor: true),
+                  icon: const Icon(Icons.add_circle_outline),
+                  label: const Text('New course'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _importFromFile,
+                  icon: const Icon(Icons.file_upload_outlined),
+                  label: const Text('Import'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _emptyState(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'No saved courses yet',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Create your first course or import one to start racing.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                FilledButton.icon(
+                  onPressed: () => _createCourse(openEditor: true),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create course'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _importFromFile,
+                  icon: const Icon(Icons.folder_open),
+                  label: const Text('Import file'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionHeader(BuildContext context, String title) => Padding(
+        padding: const EdgeInsets.fromLTRB(4, 6, 4, 8),
+        child: Text(
+          title,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+        ),
+      );
+
+  Widget _courseRow(BuildContext context, CourseEntry entry) {
+    final active = _activeEntry?.id == entry.id;
+    final parts = <String>[
+      if (entry.groupName != null && entry.groupName!.isNotEmpty)
+        entry.groupName!,
+      if (entry.details != null && entry.details!.isNotEmpty) entry.details!,
+      '${entry.buoyCount} mark${entry.buoyCount == 1 ? '' : 's'}',
+    ];
+    final colors = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Card(
+        color: active ? colors.primaryContainer.withValues(alpha: 0.55) : null,
+        child: ListTile(
+          contentPadding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+          onTap: () => _selectEntry(entry),
+          leading: CircleAvatar(
+            backgroundColor:
+                active ? colors.primary : colors.surfaceContainerHighest,
+            foregroundColor:
+                active ? colors.onPrimary : colors.onSurfaceVariant,
+            child: Icon(
+              active
+                  ? Icons.check
+                  : entry.isBundled
+                      ? Icons.inventory_2_outlined
+                      : Icons.bookmark_outline,
+            ),
+          ),
+          title: Text(
+            entry.name,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(parts.join(' · ')),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (active)
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Text(
+                    'Active',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: colors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+              PopupMenuButton<String>(
+                tooltip: 'Course actions',
+                onSelected: (value) => _handleCourseMenuSelection(entry, value),
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Edit course'),
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'share',
+                    child: ListTile(
+                      leading: Icon(Icons.ios_share),
+                      title: Text('Share course'),
+                    ),
+                  ),
+                  if (!entry.isBundled)
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: ListTile(
+                        leading: Icon(Icons.delete_outline),
+                        title: Text('Delete course'),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CourseEditorPage extends StatefulWidget {
+  const _CourseEditorPage({
+    required this.course,
+    required this.isBundledTemplate,
+  });
+
+  final Course course;
+  final bool isBundledTemplate;
+
+  @override
+  State<_CourseEditorPage> createState() => _CourseEditorPageState();
+}
+
+class _CourseEditorPageState extends State<_CourseEditorPage> {
+  late Course _course;
+
+  @override
+  void initState() {
+    super.initState();
+    _course = widget.course;
+  }
+
+  Future<void> _addOrEdit({Buoy? existing, int? index}) async {
+    final result = await showDialog<Buoy>(
+      context: context,
+      builder: (_) => _BuoyDialog(buoy: existing),
+    );
+    if (result == null) return;
+    setState(() {
+      if (index == null) {
+        _course.buoys.add(result);
+      } else {
+        _course.buoys[index] = result;
+      }
+    });
+  }
+
+  void _remove(int index) {
+    setState(() => _course.buoys.removeAt(index));
+  }
+
+  Future<void> _rename() async {
+    final controller = TextEditingController(text: _course.name);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Course name'),
+        content: TextField(controller: controller, autofocus: true),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty) return;
+    setState(() => _course.name = name);
+  }
+
+  void _closeEditor() {
+    Navigator.pop(context, _course);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Done',
+          onPressed: _closeEditor,
+        ),
         title: Text(_course.name),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.library_books_outlined),
-            tooltip: 'Library',
-            onPressed: _openLibrary,
-          ),
           IconButton(
             icon: const Icon(Icons.edit),
             tooltip: 'Rename course',
             onPressed: _rename,
           ),
-          PopupMenuButton<String>(
-            tooltip: 'Share / import',
-            icon: const Icon(Icons.more_vert),
-            onSelected: (v) {
-              switch (v) {
-                case 'new':
-                  _newCourse();
-                  break;
-                case 'save':
-                  _saveCurrentToLibrary();
-                  break;
-                case 'share':
-                  _exportShare();
-                  break;
-                case 'view':
-                  _exportShowJson();
-                  break;
-                case 'pick':
-                  _importFromFile();
-                  break;
-                case 'paste':
-                  _importFromPaste();
-                  break;
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: 'new',
-                child: ListTile(
-                  leading: Icon(Icons.add_circle_outline),
-                  title: Text('New course'),
-                ),
-              ),
-              PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'save',
-                child: ListTile(
-                  leading: Icon(Icons.bookmark_add_outlined),
-                  title: Text('Save to library'),
-                ),
-              ),
-              PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'share',
-                child: ListTile(
-                  leading: Icon(Icons.ios_share),
-                  title: Text('Share as file'),
-                  subtitle: Text('Send via Mail, Messages, AirDrop…'),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'view',
-                child: ListTile(
-                  leading: Icon(Icons.code),
-                  title: Text('View / copy JSON'),
-                ),
-              ),
-              PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'pick',
-                child: ListTile(
-                  leading: Icon(Icons.folder_open),
-                  title: Text('Import from file…'),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'paste',
-                child: ListTile(
-                  leading: Icon(Icons.paste),
-                  title: Text('Import from pasted JSON…'),
-                ),
-              ),
-            ],
+          TextButton(
+            onPressed: _closeEditor,
+            child: const Text('Done'),
           ),
         ],
       ),
       body: _course.buoys.isEmpty
-          ? const Center(
+          ? Center(
               child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'Add the race marks in order.\nTap + to add a buoy.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      widget.isBundledTemplate
+                          ? 'Add or adjust the race marks for your own copy of this course.'
+                          : 'Add the race marks in order.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: () => _addOrEdit(),
+                      icon: const Icon(Icons.add_location_alt),
+                      label: const Text('Add first buoy'),
+                    ),
+                  ],
                 ),
               ),
             )
           : ReorderableListView.builder(
               itemCount: _course.buoys.length,
-              onReorder: (oldI, newI) {
+              onReorder: (oldIndex, newIndex) {
                 setState(() {
-                  if (newI > oldI) newI -= 1;
-                  final b = _course.buoys.removeAt(oldI);
-                  _course.buoys.insert(newI, b);
+                  if (newIndex > oldIndex) newIndex -= 1;
+                  final buoy = _course.buoys.removeAt(oldIndex);
+                  _course.buoys.insert(newIndex, buoy);
                 });
-                _commit();
               },
-              itemBuilder: (ctx, i) {
-                final b = _course.buoys[i];
+              itemBuilder: (ctx, index) {
+                final buoy = _course.buoys[index];
                 return ListTile(
-                  key: ValueKey('${b.name}-$i'),
-                  leading: CircleAvatar(child: Text('${i + 1}')),
-                  title: Text(b.name),
+                  key: ValueKey('${buoy.name}-$index'),
+                  leading: CircleAvatar(child: Text('${index + 1}')),
+                  title: Text(buoy.name),
                   subtitle: Text(
-                    '${b.position.lat.toStringAsFixed(5)}, '
-                    '${b.position.lng.toStringAsFixed(5)}  •  '
-                    'r=${b.roundingRadiusM.toStringAsFixed(0)} m',
+                    '${buoy.position.lat.toStringAsFixed(5)}, '
+                    '${buoy.position.lng.toStringAsFixed(5)}  •  '
+                    'r=${buoy.roundingRadiusM.toStringAsFixed(0)} m',
                   ),
-                  onTap: () => _addOrEdit(existing: b, index: i),
+                  onTap: () => _addOrEdit(existing: buoy, index: index),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
                         icon: const Icon(Icons.delete_outline),
-                        onPressed: () => _remove(i),
+                        onPressed: () => _remove(index),
                       ),
                       const Icon(Icons.drag_handle),
                     ],
@@ -503,8 +891,9 @@ class _CourseScreenState extends State<CourseScreen> {
 }
 
 class _BuoyDialog extends StatefulWidget {
-  final Buoy? buoy;
   const _BuoyDialog({this.buoy});
+
+  final Buoy? buoy;
 
   @override
   State<_BuoyDialog> createState() => _BuoyDialogState();
@@ -541,15 +930,19 @@ class _BuoyDialogState extends State<_BuoyDialog> {
     super.dispose();
   }
 
-  String? _validateLat(String? s) {
-    final v = double.tryParse(s ?? '');
-    if (v == null || v < -90 || v > 90) return 'Latitude must be -90..90';
+  String? _validateLat(String? value) {
+    final parsed = double.tryParse(value ?? '');
+    if (parsed == null || parsed < -90 || parsed > 90) {
+      return 'Latitude must be -90..90';
+    }
     return null;
   }
 
-  String? _validateLng(String? s) {
-    final v = double.tryParse(s ?? '');
-    if (v == null || v < -180 || v > 180) return 'Longitude must be -180..180';
+  String? _validateLng(String? value) {
+    final parsed = double.tryParse(value ?? '');
+    if (parsed == null || parsed < -180 || parsed > 180) {
+      return 'Longitude must be -180..180';
+    }
     return null;
   }
 
@@ -566,8 +959,8 @@ class _BuoyDialogState extends State<_BuoyDialog> {
               TextFormField(
                 controller: _name,
                 decoration: const InputDecoration(labelText: 'Name'),
-                validator: (s) =>
-                    (s == null || s.trim().isEmpty) ? 'Required' : null,
+                validator: (value) =>
+                    (value == null || value.trim().isEmpty) ? 'Required' : null,
               ),
               TextFormField(
                 controller: _lat,
@@ -595,9 +988,9 @@ class _BuoyDialogState extends State<_BuoyDialog> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                validator: (s) {
-                  final v = double.tryParse(s ?? '');
-                  if (v == null || v <= 0) return 'Must be > 0';
+                validator: (value) {
+                  final parsed = double.tryParse(value ?? '');
+                  if (parsed == null || parsed <= 0) return 'Must be > 0';
                   return null;
                 },
               ),
@@ -628,153 +1021,6 @@ class _BuoyDialogState extends State<_BuoyDialog> {
           child: const Text('Save'),
         ),
       ],
-    );
-  }
-}
-
-enum _LibraryActionKind {
-  loadCourse,
-  shareCourse,
-  deleteCourse,
-  newCourse,
-}
-
-class _LibraryAction {
-  _LibraryAction(this.kind, {this.courseEntry});
-
-  final _LibraryActionKind kind;
-  final CourseEntry? courseEntry;
-}
-
-enum _ImportChoice { replace, addNew }
-
-class _LibrarySheet extends StatelessWidget {
-  const _LibrarySheet({required this.entries});
-
-  final List<CourseEntry> entries;
-
-  @override
-  Widget build(BuildContext context) {
-    final bundled = entries.where((e) => e.isBundled).toList();
-    final saved = entries.where((e) => !e.isBundled).toList();
-    final hasAnyEntries = bundled.isNotEmpty || saved.isNotEmpty;
-
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.8,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 16, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Library',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  FilledButton.icon(
-                    onPressed: () => Navigator.pop(
-                      context,
-                      _LibraryAction(_LibraryActionKind.newCourse),
-                    ),
-                    icon: const Icon(Icons.add),
-                    label: const Text('New'),
-                  ),
-                ],
-              ),
-            ),
-            if (!hasAnyEntries)
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'No saved courses yet. Save a course to add it here.',
-                ),
-              )
-            else
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    if (saved.isNotEmpty) ...[
-                      _sectionHeader(context, 'Saved Courses'),
-                      ...saved.map((e) => _courseRow(context, e)),
-                    ],
-                    if (bundled.isNotEmpty) ...[
-                      _sectionHeader(context, 'Bundled Courses'),
-                      ...bundled.map((e) => _courseRow(context, e)),
-                    ],
-                  ],
-                ),
-              ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _sectionHeader(BuildContext context, String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-        child: Text(
-          title,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-        ),
-      );
-
-  Widget _courseRow(BuildContext context, CourseEntry e) {
-    final parts = <String>[
-      if (e.groupName != null && e.groupName!.isNotEmpty) e.groupName!,
-      if (e.details != null && e.details!.isNotEmpty) e.details!,
-      '${e.buoyCount} mark${e.buoyCount == 1 ? '' : 's'}',
-      if (e.isBundled) 'bundled',
-    ];
-    return ListTile(
-      leading: CircleAvatar(
-        child: Icon(e.isBundled ? Icons.inventory_2_outlined : Icons.bookmark),
-      ),
-      title: Text(e.name),
-      subtitle: Text(parts.join(' · ')),
-      onTap: () => Navigator.pop(
-        context,
-        _LibraryAction(_LibraryActionKind.loadCourse, courseEntry: e),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.ios_share),
-            tooltip: 'Share',
-            onPressed: () => Navigator.pop(
-              context,
-              _LibraryAction(_LibraryActionKind.shareCourse, courseEntry: e),
-            ),
-          ),
-          if (!e.isBundled)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              tooltip: 'Remove',
-              onPressed: () => Navigator.pop(
-                context,
-                _LibraryAction(_LibraryActionKind.deleteCourse, courseEntry: e),
-              ),
-            ),
-          FilledButton.tonal(
-            onPressed: () => Navigator.pop(
-              context,
-              _LibraryAction(_LibraryActionKind.loadCourse, courseEntry: e),
-            ),
-            child: const Text('Load'),
-          ),
-        ],
-      ),
     );
   }
 }

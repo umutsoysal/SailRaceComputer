@@ -55,7 +55,28 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Map')),
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Map',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    letterSpacing: 0.8,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            Text(
+              widget.course.name,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
       body: widget.course.buoys.isEmpty
           ? const Center(child: Text('Add buoys on the Course tab first.'))
           : _buildMap(),
@@ -72,7 +93,7 @@ class _MapScreenState extends State<MapScreen> {
           child: LayoutBuilder(
             builder: (context, constraints) => InteractiveViewer(
               transformationController: _mapTransformController,
-              boundaryMargin: const EdgeInsets.all(120),
+              boundaryMargin: const EdgeInsets.all(280),
               minScale: 0.75,
               maxScale: 8,
               child: SizedBox(
@@ -84,6 +105,7 @@ class _MapScreenState extends State<MapScreen> {
                     boat: boat,
                     heading: fix?.heading ?? 0,
                     speedMs: fix?.speed ?? 0,
+                    paddingPx: 96,
                   ),
                 ),
               ),
@@ -99,8 +121,23 @@ class _MapScreenState extends State<MapScreen> {
               child: error == null ? _gpsChip() : _locationErrorChip(error),
             ),
           ),
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: FloatingActionButton.small(
+            key: const Key('map-fit-button'),
+            heroTag: 'map-fit-button',
+            tooltip: 'Fit course and boat',
+            onPressed: _resetMapView,
+            child: const Icon(Icons.center_focus_strong),
+          ),
+        ),
       ],
     );
+  }
+
+  void _resetMapView() {
+    _mapTransformController.value = Matrix4.identity();
   }
 
   Widget _gpsChip() {

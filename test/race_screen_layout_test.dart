@@ -350,7 +350,7 @@ void main() {
 
       expect(find.byKey(const Key('finish-race-button')), findsOneWidget);
       expect(find.text('VMG to mark'), findsOneWidget);
-      expect(find.text('Finish & save'), findsWidgets);
+      expect(find.text('Finish'), findsOneWidget);
     });
 
     testWidgets('starting a new race resets back to the first mark', (

@@ -49,7 +49,37 @@ void main() {
         ],
       ),
     );
-    expect(await raceStore.listSaved(), hasLength(1));
+    await raceStore.saveCompleted(
+      RaceSessionRecord(
+        courseName: 'Columbia Yacht Club',
+        startedAt: DateTime.utc(2026, 7, 3, 23, 40),
+        finishedAt: DateTime.utc(2026, 7, 3, 23, 50),
+        totalMarks: 2,
+        finalMarkIndex: 1,
+        completedCourse: true,
+        track: [
+          RaceTrackPoint(
+            recordedAt: DateTime.utc(2026, 7, 3, 23, 40),
+            latitude: 41.89,
+            longitude: -87.61,
+            accuracyM: 5,
+            speedMs: 2.1,
+            headingDeg: 28,
+            altitudeM: 180,
+          ),
+          RaceTrackPoint(
+            recordedAt: DateTime.utc(2026, 7, 3, 23, 45),
+            latitude: 41.894,
+            longitude: -87.605,
+            accuracyM: 5,
+            speedMs: 2.7,
+            headingDeg: 37,
+            altitudeM: 180,
+          ),
+        ],
+      ),
+    );
+    expect(await raceStore.listSaved(), hasLength(2));
 
     final course = Course(
       name: 'Harbor Start',
@@ -65,31 +95,48 @@ void main() {
 
     expect(find.text('Race'), findsOneWidget);
     expect(find.text('Map'), findsOneWidget);
-    expect(find.text('Courses'), findsOneWidget);
+    expect(find.text('Courses'), findsWidgets);
     expect(find.text('Recordings'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
 
-    await tester.tap(find.text('Courses'));
+    await tester.tap(find.text('Courses').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('Add buoy'), findsOneWidget);
-    expect(find.byTooltip('Library'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('Library'));
-    await tester.pumpAndSettle();
-
+    expect(find.text('Selected course'), findsOneWidget);
+    expect(find.text('Harbor Start'), findsOneWidget);
+    expect(find.text('Edit course'), findsOneWidget);
+    expect(find.text('New course'), findsOneWidget);
+    expect(find.byKey(const Key('course-group-filter')), findsOneWidget);
     expect(find.text('Bundled Courses'), findsOneWidget);
     expect(find.text('Saved Courses'), findsNothing);
     expect(find.text('Recorded Races'), findsNothing);
 
-    await tester.tapAt(const Offset(20, 20));
+    await tester.tap(find.byKey(const Key('course-group-filter')));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('CCYC Race Courses 2026').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('CCYC Race Courses 2026'), findsWidgets);
+    expect(
+      find.text('Columbia YC Wednesday Night Beer Can Series 2026'),
+      findsNothing,
+    );
 
     await tester.tap(find.text('Recordings'));
     await tester.pumpAndSettle();
 
     expect(find.text('Recorded Races'), findsOneWidget);
-    expect(find.text('Wednesday Series'), findsOneWidget);
+    expect(find.byKey(const Key('library-group-filter')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library-group-filter')));
+    await tester.pumpAndSettle();
+    expect(find.text('Wednesday Series').last, findsOneWidget);
+    expect(find.text('Columbia Yacht Club').last, findsOneWidget);
+    await tester.tap(find.text('Wednesday Series').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Wednesday Series'), findsWidgets);
+    expect(find.text('Columbia Yacht Club'), findsNothing);
     expect(find.byTooltip('Race actions'), findsOneWidget);
     expect(find.byType(RecordingMapPreview), findsOneWidget);
 
