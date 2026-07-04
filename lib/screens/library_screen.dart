@@ -83,14 +83,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _shareCourse(CourseEntry entry) async {
-    final json = CourseFile.encode(entry.course);
     final filename = CourseFile.suggestedFileName(entry.course);
     try {
       await SharePlus.instance.share(
         ShareParams(
-          text: json,
+          files: [
+            XFile.fromData(
+              CourseFile.encodeBytes(entry.course),
+              mimeType: CourseFile.mimeType,
+              name: filename,
+            ),
+          ],
           subject: entry.name,
           fileNameOverrides: [filename],
+          text: 'Course exported from Race Mate.',
+          downloadFallbackEnabled: true,
         ),
       );
     } catch (err) {

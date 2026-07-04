@@ -484,10 +484,9 @@ class _RaceScreenState extends State<RaceScreen> {
     return Scaffold(
       appBar: AppBar(
         title: _raceState == _RaceState.running
-            ? Column(
+            ? Row(
                 key: const Key('race-app-bar-timer'),
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     clock.caption,
@@ -497,6 +496,7 @@ class _RaceScreenState extends State<RaceScreen> {
                           fontWeight: FontWeight.w700,
                         ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     clock.label,
                     key: const Key('race-app-bar-timer-value'),
@@ -658,10 +658,6 @@ class _RaceScreenState extends State<RaceScreen> {
 
         return Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _buildRaceViewSelector(),
-            ),
             Expanded(
               child: PageView(
                 key: const Key('race-view-pager'),
@@ -690,12 +686,23 @@ class _RaceScreenState extends State<RaceScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: _finishRaceButton(),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: _raceBottomBar(),
             ),
           ],
         );
       },
+    );
+  }
+
+  Widget _raceBottomBar() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: _buildRaceViewSelector()),
+        const SizedBox(width: 12),
+        _finishRaceButton(),
+      ],
     );
   }
 
@@ -1466,28 +1473,36 @@ class _RaceScreenState extends State<RaceScreen> {
     return Card(
       color: color.withValues(alpha: 0.08),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
         child: Column(
           children: [
             Text(label, style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
                 children: [
                   Text(
                     value,
                     style: TextStyle(
-                      fontSize: 56,
+                      fontSize: 50,
                       fontWeight: FontWeight.w700,
                       color: color,
                     ),
                   ),
                   if (unit.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    Text(unit, style: TextStyle(fontSize: 22, color: color)),
+                    const SizedBox(width: 6),
+                    Text(
+                      unit,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: color,
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -1607,34 +1622,27 @@ class _RaceScreenState extends State<RaceScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < compactThreshold) {
-          return Column(
-            children: [
-              for (var i = 0; i < tiles.length; i++) ...[
-                tiles[i],
-                if (i < tiles.length - 1) SizedBox(height: spacing),
-              ],
-            ],
-          );
-        }
-
+        final effectiveSpacing =
+            constraints.maxWidth < compactThreshold ? spacing * 0.75 : spacing;
+        final distanceBearingRow = Row(
+          children: [
+            Expanded(child: tiles[0]),
+            SizedBox(width: effectiveSpacing),
+            Expanded(child: tiles[1]),
+          ],
+        );
+        final speedCourseSection = Row(
+          children: [
+            Expanded(child: tiles[2]),
+            SizedBox(width: effectiveSpacing),
+            Expanded(child: tiles[3]),
+          ],
+        );
         return Column(
           children: [
-            Row(
-              children: [
-                Expanded(child: tiles[0]),
-                SizedBox(width: spacing),
-                Expanded(child: tiles[1]),
-              ],
-            ),
-            SizedBox(height: spacing),
-            Row(
-              children: [
-                Expanded(child: tiles[2]),
-                SizedBox(width: spacing),
-                Expanded(child: tiles[3]),
-              ],
-            ),
+            distanceBearingRow,
+            SizedBox(height: effectiveSpacing),
+            speedCourseSection,
           ],
         );
       },

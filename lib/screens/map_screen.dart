@@ -93,7 +93,7 @@ class _MapScreenState extends State<MapScreen> {
           child: LayoutBuilder(
             builder: (context, constraints) => InteractiveViewer(
               transformationController: _mapTransformController,
-              boundaryMargin: const EdgeInsets.all(280),
+              boundaryMargin: const EdgeInsets.all(360),
               minScale: 0.75,
               maxScale: 8,
               child: SizedBox(
@@ -105,7 +105,7 @@ class _MapScreenState extends State<MapScreen> {
                     boat: boat,
                     heading: fix?.heading ?? 0,
                     speedMs: fix?.speed ?? 0,
-                    paddingPx: 96,
+                    paddingPx: 120,
                   ),
                 ),
               ),
@@ -124,12 +124,14 @@ class _MapScreenState extends State<MapScreen> {
         Positioned(
           right: 16,
           bottom: 16,
-          child: FloatingActionButton.small(
-            key: const Key('map-fit-button'),
-            heroTag: 'map-fit-button',
-            tooltip: 'Fit course and boat',
-            onPressed: _resetMapView,
-            child: const Icon(Icons.center_focus_strong),
+          child: Tooltip(
+            message: 'Center course and boat',
+            child: FilledButton.tonalIcon(
+              key: const Key('map-fit-button'),
+              onPressed: _resetMapView,
+              icon: const Icon(Icons.center_focus_strong),
+              label: const Text('Center'),
+            ),
           ),
         ),
       ],

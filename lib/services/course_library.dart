@@ -41,6 +41,21 @@ class CourseLibrary {
   static const _key = 'sail_race_library_v1';
   static const _assetDir = 'assets/courses/';
 
+  String? _bundledGroupName(
+    ImportedCourseBundle bundle,
+    ImportedCourseDefinition imported,
+  ) {
+    if (bundle.courses.length <= 1) return null;
+    final bundleName = bundle.name.trim();
+    final courseType = imported.type?.trim();
+    if (bundleName.toUpperCase().startsWith('MORF') &&
+        courseType != null &&
+        courseType.isNotEmpty) {
+      return 'MORF · $courseType';
+    }
+    return bundleName;
+  }
+
   Future<List<CourseEntry>> listBundled() async {
     try {
       final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
@@ -59,7 +74,7 @@ class CourseLibrary {
               id: 'asset:$k#${imported.id}',
               source: CourseSource.bundled,
               course: imported.course,
-              groupName: bundle.courses.length > 1 ? bundle.name : null,
+              groupName: _bundledGroupName(bundle, imported),
               details: imported.summary,
             ));
           }

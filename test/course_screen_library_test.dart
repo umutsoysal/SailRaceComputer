@@ -113,6 +113,8 @@ void main() {
 
     await tester.tap(find.byKey(const Key('course-group-filter')));
     await tester.pumpAndSettle();
+    expect(find.text('MORF · Olympic').last, findsOneWidget);
+    expect(find.text('MORF · Trapezoidal').last, findsOneWidget);
     await tester.tap(find.text('CCYC Race Courses 2026').last);
     await tester.pumpAndSettle();
 
