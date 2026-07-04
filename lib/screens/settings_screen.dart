@@ -29,7 +29,11 @@ Future<void> _launchFeedbackEmail(BuildContext context) async {
 }
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.onStartTour});
+
+  /// Replays the overlay help tour when the "App Tour" tile is tapped.
+  /// The tile is hidden when null.
+  final VoidCallback? onStartTour;
 
   static const _effectiveDate = 'Effective July 3, 2026';
 
@@ -73,6 +77,13 @@ class SettingsScreen extends StatelessWidget {
                 subtitle: 'Tell us what is working and what needs improvement.',
                 action: _launchFeedbackEmail,
               ),
+              if (onStartTour != null)
+                _SettingsItem(
+                  icon: Icons.tour_outlined,
+                  title: 'App Tour',
+                  subtitle: 'Replay the quick walkthrough of the main tabs.',
+                  action: (_) async => onStartTour!(),
+                ),
               const _SettingsItem(
                 icon: Icons.help_outline,
                 title: 'Help',

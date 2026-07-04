@@ -7,6 +7,7 @@ import 'screens/race_screen.dart';
 import 'screens/settings_screen.dart';
 import 'services/app_analytics.dart';
 import 'services/position_source.dart';
+import 'widgets/help_tour.dart';
 
 /// The user-facing app: course editing, racing, recordings, and settings.
 ///
@@ -19,12 +20,18 @@ class AppShell extends StatefulWidget {
     required this.onCourseChanged,
     this.positionSource,
     this.initialTab = 0,
+    this.showTourOnFirstLaunch = false,
   });
 
   final Course course;
   final ValueChanged<Course> onCourseChanged;
   final PositionSource? positionSource;
   final int initialTab;
+
+  /// When true, the overlay help tour is shown once on first launch
+  /// (tracked via shared preferences). Production enables this; the dev
+  /// simulator and tests leave it off.
+  final bool showTourOnFirstLaunch;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -35,13 +42,67 @@ class _AppShellState extends State<AppShell> {
   var _libraryVersion = 0;
   var _raceRecording = false;
 
+  final _navDestinationKeys =
+      List.generate(5, (i) => GlobalKey(debugLabel: 'nav-destination-$i'));
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       _logTabSelection(_tab);
+      if (widget.showTourOnFirstLaunch && !await HelpTour.hasSeen()) {
+        if (mounted) _startTour();
+      }
     });
+  }
+
+  void _startTour() {
+    HelpTour.show(
+      context,
+      steps: [
+        const HelpTourStep(
+          title: 'Welcome to Race Mate',
+          body: 'Here is a quick tour of the main tabs. '
+              'Tap anywhere to continue, or skip at any time.',
+        ),
+        HelpTourStep(
+          targetKey: _navDestinationKeys[0],
+          title: 'Courses',
+          body: 'Set up your racecourse: add and edit buoys, and share or '
+              'import course files with your crew.',
+        ),
+        HelpTourStep(
+          targetKey: _navDestinationKeys[1],
+          title: 'Map',
+          body: 'See the course top-down with your live GPS position '
+              'overlaid. Pinch to zoom and pan around.',
+        ),
+        HelpTourStep(
+          targetKey: _navDestinationKeys[2],
+          title: 'Race',
+          body: 'Race day lives here: live speed and headings, plus track '
+              'recording. The tab glows orange while recording.',
+        ),
+        HelpTourStep(
+          targetKey: _navDestinationKeys[3],
+          title: 'Recordings',
+          body: 'Review past races and load a recorded course back into '
+              'the editor.',
+        ),
+        HelpTourStep(
+          targetKey: _navDestinationKeys[4],
+          title: 'Settings',
+          body: 'Preferences, feedback, and legal info. You can replay '
+              'this tour from here anytime.',
+        ),
+      ],
+      onStepShown: (step) {
+        if (step == 0 || !mounted) return;
+        final tab = step - 1;
+        if (_tab != tab) setState(() => _tab = tab);
+      },
+    );
   }
 
   @override
@@ -76,7 +137,7 @@ class _AppShellState extends State<AppShell> {
             title: 'Recordings',
             mode: LibraryContentMode.recordings,
           ),
-          const SettingsScreen(),
+          SettingsScreen(onStartTour: _startTour),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -91,17 +152,20 @@ class _AppShellState extends State<AppShell> {
           _logTabSelection(i);
         },
         destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.flag_outlined),
-            selectedIcon: Icon(Icons.flag),
+          NavigationDestination(
+            key: _navDestinationKeys[0],
+            icon: const Icon(Icons.flag_outlined),
+            selectedIcon: const Icon(Icons.flag),
             label: 'Courses',
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.map_outlined),
-            selectedIcon: Icon(Icons.map),
+          NavigationDestination(
+            key: _navDestinationKeys[1],
+            icon: const Icon(Icons.map_outlined),
+            selectedIcon: const Icon(Icons.map),
             label: 'Map',
           ),
           NavigationDestination(
+            key: _navDestinationKeys[2],
             icon: _RaceTabIcon(
               isHighlighted: _raceRecording,
               isSelected: false,
@@ -112,14 +176,16 @@ class _AppShellState extends State<AppShell> {
             ),
             label: 'Race',
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.history_outlined),
-            selectedIcon: Icon(Icons.history),
+          NavigationDestination(
+            key: _navDestinationKeys[3],
+            icon: const Icon(Icons.history_outlined),
+            selectedIcon: const Icon(Icons.history),
             label: 'Recordings',
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
+          NavigationDestination(
+            key: _navDestinationKeys[4],
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
             label: 'Settings',
           ),
         ],

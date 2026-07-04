@@ -118,6 +118,7 @@ class _HomeState extends State<_Home> {
     return AppShell(
       course: course,
       onCourseChanged: _onCourseChanged,
+      showTourOnFirstLaunch: true,
     );
   }
 }
