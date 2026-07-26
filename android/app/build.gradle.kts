@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -8,15 +10,27 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val keystoreProperties = java.util.Properties()
+val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
-    keystorePropertiesFile.inputStream().use(keystoreProperties::load)
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
 fun secret(propertyName: String, envName: String): String? =
     keystoreProperties.getProperty(propertyName)?.takeIf { it.isNotBlank() }
         ?: System.getenv(envName)?.takeIf { it.isNotBlank() }
+
+val storeFileValue = secret("storeFile", "ANDROID_KEYSTORE_PATH")
+val storePasswordValue = secret("storePassword", "ANDROID_KEYSTORE_PASSWORD")
+val keyAliasValue = secret("keyAlias", "ANDROID_KEY_ALIAS")
+val keyPasswordValue = secret("keyPassword", "ANDROID_KEY_PASSWORD")
+
+// Release signing needs the whole set. When any part is missing — a fork, a
+// clean checkout, or CI without the keystore secrets — the release build falls
+// back to debug signing so it still produces an installable APK.
+val hasReleaseSigning =
+    listOf(storeFileValue, storePasswordValue, keyAliasValue, keyPasswordValue)
+        .none { it.isNullOrBlank() }
 
 android {
     namespace = "com.sailrace.sail_race_computer"
@@ -41,20 +55,9 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            val storeFileValue = secret("storeFile", "ANDROID_KEYSTORE_PATH")
-            val storePasswordValue =
-                secret("storePassword", "ANDROID_KEYSTORE_PASSWORD")
-            val keyAliasValue = secret("keyAlias", "ANDROID_KEY_ALIAS")
-            val keyPasswordValue = secret("keyPassword", "ANDROID_KEY_PASSWORD")
-
-            if (
-                !storeFileValue.isNullOrBlank() &&
-                !storePasswordValue.isNullOrBlank() &&
-                !keyAliasValue.isNullOrBlank() &&
-                !keyPasswordValue.isNullOrBlank()
-            ) {
-                storeFile = file(storeFileValue)
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = storeFileValue?.let { file(it) }
                 storePassword = storePasswordValue
                 keyAlias = keyAliasValue
                 keyPassword = keyPasswordValue
@@ -64,17 +67,11 @@ android {
 
     buildTypes {
         release {
-            val hasReleaseSigning =
-                !secret("storeFile", "ANDROID_KEYSTORE_PATH").isNullOrBlank() &&
-                !secret("storePassword", "ANDROID_KEYSTORE_PASSWORD").isNullOrBlank() &&
-                !secret("keyAlias", "ANDROID_KEY_ALIAS").isNullOrBlank() &&
-                !secret("keyPassword", "ANDROID_KEY_PASSWORD").isNullOrBlank()
-            signingConfig =
-                if (hasReleaseSigning) {
-                    signingConfigs.getByName("release")
-                } else {
-                    signingConfigs.getByName("debug")
-                }
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
