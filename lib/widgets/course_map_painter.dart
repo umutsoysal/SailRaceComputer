@@ -230,8 +230,9 @@ class CourseMapPainter extends CustomPainter {
         southEast: _proj.toLatLng(view.bottomRight),
         zoom: zoom,
       );
-      if (coords.length <= map.maxTiles || zoom <= source.minZoom) {
-        return coords;
+      if (coords.length <= map.maxTiles) return coords;
+      if (zoom <= source.minZoom) {
+        return coords.take(map.maxTiles).toList(growable: false);
       }
       zoom--;
     }
