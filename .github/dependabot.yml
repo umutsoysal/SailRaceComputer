@@ -5,37 +5,84 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+      time: "06:00"
+      timezone: "America/Chicago"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
       - "dart"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      # One PR for the routine churn; anything that breaks the app surfaces as
+      # its own reviewable PR.
+      dart-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      firebase:
+        patterns:
+          - "firebase_*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
+      time: "06:00"
+      timezone: "America/Chicago"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "github-actions"
+      - "ci"
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions:
+        patterns:
+          - "*"
 
   - package-ecosystem: "gradle"
     directory: "/android"
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 10
+      time: "06:00"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 5
     labels:
       - "dependencies"
       - "android"
+    commit-message:
+      prefix: "deps(android)"
+    groups:
+      gradle:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "bundler"
     directory: "/ios"
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 10
+      time: "06:00"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 5
     labels:
       - "dependencies"
       - "ios"
+    commit-message:
+      prefix: "deps(ios)"
+    groups:
+      bundler:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

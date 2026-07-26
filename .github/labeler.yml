@@ -1,0 +1,51 @@
+# Path-based labels applied automatically to pull requests.
+# Consumed by .github/workflows/labeler.yml (actions/labeler v5 syntax).
+
+android:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "android/**"
+
+ios:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "ios/**"
+
+web:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "web/**"
+
+courses:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "assets/courses/**"
+          - "lib/services/course_*.dart"
+          - "lib/models/course.dart"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "test/**"
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "docs/**"
+          - "screenshots/**"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - "Makefile"
+          - "tool/**"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "pubspec.yaml"
+          - "pubspec.lock"
+          - "ios/Podfile*"
+          - "android/**/build.gradle.kts"

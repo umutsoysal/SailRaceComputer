@@ -1,0 +1,44 @@
+name: Stale
+
+# Nudges issues and PRs that have gone quiet, so the tracker reflects what is
+# actually being worked on. Anything labelled `pinned` or `security` is exempt.
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stale:
+    name: Mark stale issues and PRs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9
+        with:
+          days-before-stale: 60
+          days-before-close: 14
+          exempt-issue-labels: pinned,security,roadmap
+          exempt-pr-labels: pinned,security,dependencies
+          stale-issue-label: stale
+          stale-pr-label: stale
+          stale-issue-message: >-
+            This issue has had no activity for 60 days. It will close in 14 days
+            unless there is a new comment. If it still matters, a short "still
+            relevant" is enough to keep it open.
+          stale-pr-message: >-
+            This pull request has had no activity for 60 days and will close in
+            14 days. Push a commit or comment to keep it open.
+          close-issue-message: >-
+            Closing after 74 days without activity. Comment to reopen — this is
+            housekeeping, not a rejection.
+          close-pr-message: >-
+            Closing after 74 days without activity. Reopen any time the work
+            resumes.
+          operations-per-run: 100
