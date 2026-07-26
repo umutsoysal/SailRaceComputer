@@ -1,0 +1,38 @@
+name: Set up Flutter
+description: >-
+  Installs the pinned Flutter SDK, restores the pub cache, and fetches
+  dependencies. Every workflow uses this so all jobs build against the same
+  toolchain and a new Flutter stable release cannot break CI unannounced.
+
+inputs:
+  flutter-version:
+    description: Flutter SDK version to install. Keep the default in sync with README's prerequisites table.
+    required: false
+    default: "3.41.1"
+  cache-key-suffix:
+    description: Extra qualifier for the pub cache key, so jobs with different platform deps do not thrash one cache.
+    required: false
+    default: default
+
+runs:
+  using: composite
+  steps:
+    - name: Install Flutter ${{ inputs.flutter-version }}
+      uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+      with:
+        flutter-version: ${{ inputs.flutter-version }}
+        channel: stable
+        cache: true
+
+    - name: Restore pub cache
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ${{ env.PUB_CACHE || '~/.pub-cache' }}
+        key: pub-${{ runner.os }}-${{ inputs.cache-key-suffix }}-${{ hashFiles('pubspec.lock') }}
+        restore-keys: |
+          pub-${{ runner.os }}-${{ inputs.cache-key-suffix }}-
+          pub-${{ runner.os }}-
+
+    - name: Install dependencies
+      shell: bash
+      run: flutter pub get
