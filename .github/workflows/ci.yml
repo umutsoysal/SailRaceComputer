@@ -58,11 +58,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # `local` reporter writes straight to the job log. github-check would
+      # need `checks: write`, which forked pull requests cannot be granted.
       - name: Run actionlint
         uses: reviewdog/action-actionlint@50842263c20a7c46bd0065b9e624d3c569db061e # v1
         with:
-          reporter: github-check
+          reporter: local
+          level: error
           fail_level: error
+          fail_on_error: true
 
   build-web:
     name: Build web
@@ -78,7 +82,11 @@ jobs:
         uses: ./.github/actions/setup-flutter
 
       - name: Build production web bundle
-        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/" $(dart tool/version.dart build-args web)
+        # Word splitting of the build-args output is intentional: it emits
+        # multiple separate flags.
+        run: |
+          # shellcheck disable=SC2046
+          flutter build web --release --base-href "/${{ github.event.repository.name }}/" $(dart tool/version.dart build-args web)
 
   build-android:
     name: Build Android
@@ -95,18 +103,23 @@ jobs:
         with:
           cache-key-suffix: android
 
-      # Configuration-only. Catches an incompatible Gradle/AGP/Kotlin
-      # combination in seconds instead of part-way through the APK build, and
-      # prints which signing config the release variant resolved to.
-      - name: Check Gradle configures and report signing
-        working-directory: android
-        run: ./gradlew --no-daemon :app:signingReport
-
+      # No standalone `./gradlew` step here: Flutter's android/.gitignore
+      # excludes the wrapper scripts, so they do not exist in a fresh clone.
+      # An incompatible Gradle/AGP/Kotlin combination is caught much earlier by
+      # test/toolchain_test.dart in the fast job.
       - name: Build release APK
-        run: flutter build apk --release $(dart tool/version.dart build-args android)
+        # Word splitting of the build-args output is intentional: it emits
+        # multiple separate flags.
+        run: |
+          # shellcheck disable=SC2046
+          flutter build apk --release $(dart tool/version.dart build-args android)
 
       - name: Build release Android App Bundle
-        run: flutter build appbundle --release $(dart tool/version.dart build-args android)
+        # Word splitting of the build-args output is intentional: it emits
+        # multiple separate flags.
+        run: |
+          # shellcheck disable=SC2046
+          flutter build appbundle --release $(dart tool/version.dart build-args android)
 
   build-ios:
     name: Build iOS
@@ -129,4 +142,8 @@ jobs:
           cache-key-suffix: ios
 
       - name: Build unsigned iOS release bundle
-        run: flutter build ios --release --no-codesign $(dart tool/version.dart build-args ios)
+        # Word splitting of the build-args output is intentional: it emits
+        # multiple separate flags.
+        run: |
+          # shellcheck disable=SC2046
+          flutter build ios --release --no-codesign $(dart tool/version.dart build-args ios)

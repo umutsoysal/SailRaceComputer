@@ -66,18 +66,24 @@ jobs:
           fi
 
       - name: Build Android and Web artifacts
+        # Word splitting of the build-args output is intentional: it emits
+        # multiple separate flags.
         run: |
+          # shellcheck disable=SC2046
           flutter build apk --release $(dart tool/version.dart build-args android)
+          # shellcheck disable=SC2046
           flutter build appbundle --release $(dart tool/version.dart build-args android)
+          # shellcheck disable=SC2046
           flutter build web --release --base-href "/" $(dart tool/version.dart build-args web)
 
       - name: Collect release assets
         run: |
           mkdir -p release-assets
           ANDROID_BUILD="$(dart tool/version.dart value android-build)"
-          cp build/app/outputs/flutter-apk/app-release.apk release-assets/race-mate-${GITHUB_REF_NAME}-android-b${ANDROID_BUILD}.apk
-          cp build/app/outputs/bundle/release/app-release.aab release-assets/race-mate-${GITHUB_REF_NAME}-android-b${ANDROID_BUILD}.aab
-          tar -czf release-assets/race-mate-web-${GITHUB_REF_NAME}.tar.gz -C build/web .
+          BASE="race-mate-${GITHUB_REF_NAME}-android-b${ANDROID_BUILD}"
+          cp build/app/outputs/flutter-apk/app-release.apk "release-assets/${BASE}.apk"
+          cp build/app/outputs/bundle/release/app-release.aab "release-assets/${BASE}.aab"
+          tar -czf "release-assets/race-mate-web-${GITHUB_REF_NAME}.tar.gz" -C build/web .
 
       - name: Upload packaged Android and Web assets
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -107,13 +113,18 @@ jobs:
         run: dart tool/verify_release_version.dart "${GITHUB_REF_NAME}"
 
       - name: Build unsigned iOS release bundle
-        run: flutter build ios --release --no-codesign $(dart tool/version.dart build-args ios)
+        # Word splitting of the build-args output is intentional: it emits
+        # multiple separate flags.
+        run: |
+          # shellcheck disable=SC2046
+          flutter build ios --release --no-codesign $(dart tool/version.dart build-args ios)
 
       - name: Archive iOS app bundle
         run: |
           mkdir -p release-assets
           IOS_BUILD="$(dart tool/version.dart value ios-build)"
-          ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app release-assets/race-mate-ios-${GITHUB_REF_NAME}-ios-b${IOS_BUILD}-unsigned.zip
+          ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app \
+            "release-assets/race-mate-ios-${GITHUB_REF_NAME}-ios-b${IOS_BUILD}-unsigned.zip"
 
       - name: Upload packaged iOS asset
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

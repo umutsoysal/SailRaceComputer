@@ -27,7 +27,11 @@ jobs:
         uses: ./.github/actions/setup-flutter
 
       - name: Build web app
-        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/" $(dart tool/version.dart build-args web)
+        # Word splitting of the build-args output is intentional: it emits
+        # multiple separate flags.
+        run: |
+          # shellcheck disable=SC2046
+          flutter build web --release --base-href "/${{ github.event.repository.name }}/" $(dart tool/version.dart build-args web)
 
       - name: Add SPA fallback for deep links
         run: cp build/web/index.html build/web/404.html
