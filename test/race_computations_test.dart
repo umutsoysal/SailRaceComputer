@@ -10,19 +10,18 @@ Position _makePosition({
   double lng = -87.62,
   double speed = 2.6,
   double heading = 45.0,
-}) =>
-    Position(
-      latitude: lat,
-      longitude: lng,
-      timestamp: DateTime(2024, 6, 1),
-      accuracy: 5,
-      altitude: 0,
-      altitudeAccuracy: 0,
-      heading: heading,
-      headingAccuracy: 0,
-      speed: speed,
-      speedAccuracy: 0,
-    );
+}) => Position(
+  latitude: lat,
+  longitude: lng,
+  timestamp: DateTime(2024, 6, 1),
+  accuracy: 5,
+  altitude: 0,
+  altitudeAccuracy: 0,
+  heading: heading,
+  headingAccuracy: 0,
+  speed: speed,
+  speedAccuracy: 0,
+);
 
 void main() {
   final course = Course(

@@ -116,9 +116,7 @@ void main() {
   testWidgets('shows the course name in the map app bar', (tester) async {
     final course = Course(
       name: 'Wednesday Series',
-      buoys: [
-        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
-      ],
+      buoys: [Buoy(name: 'Start', position: const LatLng(41.88, -87.62))],
     );
 
     await tester.pumpWidget(
@@ -140,9 +138,7 @@ void main() {
   ) async {
     final course = Course(
       name: 'Wednesday Series',
-      buoys: [
-        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
-      ],
+      buoys: [Buoy(name: 'Start', position: const LatLng(41.88, -87.62))],
     );
 
     await tester.pumpWidget(
@@ -160,35 +156,29 @@ void main() {
     expect(find.text('Waiting for GPS'), findsNothing);
   });
 
-  testWidgets('wraps the course canvas in an interactive viewer for pinch zoom',
-      (
-    tester,
-  ) async {
-    final course = Course(
-      name: 'Wednesday Series',
-      buoys: [
-        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
-      ],
-    );
+  testWidgets(
+    'wraps the course canvas in an interactive viewer for pinch zoom',
+    (tester) async {
+      final course = Course(
+        name: 'Wednesday Series',
+        buoys: [Buoy(name: 'Start', position: const LatLng(41.88, -87.62))],
+      );
 
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: SizedBox(),
-      ),
-    );
+      await tester.pumpWidget(const MaterialApp(home: SizedBox()));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: MapScreen(
-          course: course,
-          positionSource: _ErrorPositionSource('temporary'),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MapScreen(
+            course: course,
+            positionSource: _ErrorPositionSource('temporary'),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.byType(InteractiveViewer), findsOneWidget);
-  });
+      expect(find.byType(InteractiveViewer), findsOneWidget);
+    },
+  );
 
   testWidgets('fit button resets the map transform to the fitted view', (
     tester,
@@ -247,17 +237,12 @@ void main() {
     );
     final course = Course(
       name: 'Wednesday Series',
-      buoys: [
-        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
-      ],
+      buoys: [Buoy(name: 'Start', position: const LatLng(41.88, -87.62))],
     );
 
     await tester.pumpWidget(
       MaterialApp(
-        home: MapScreen(
-          course: course,
-          positionSource: source,
-        ),
+        home: MapScreen(course: course, positionSource: source),
       ),
     );
     await tester.pumpAndSettle();
@@ -295,17 +280,12 @@ void main() {
     );
     final course = Course(
       name: 'Wednesday Series',
-      buoys: [
-        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
-      ],
+      buoys: [Buoy(name: 'Start', position: const LatLng(41.88, -87.62))],
     );
 
     await tester.pumpWidget(
       MaterialApp(
-        home: MapScreen(
-          course: course,
-          positionSource: source,
-        ),
+        home: MapScreen(course: course, positionSource: source),
       ),
     );
     await tester.pump();
@@ -315,8 +295,9 @@ void main() {
     expect(find.text('Waiting for GPS'), findsNothing);
   });
 
-  testWidgets('uses a recovery gps sample after startup timeout',
-      (tester) async {
+  testWidgets('uses a recovery gps sample after startup timeout', (
+    tester,
+  ) async {
     final source = _RecoveryOnlyPositionSource(
       Position(
         latitude: 41.88,
@@ -333,17 +314,12 @@ void main() {
     );
     final course = Course(
       name: 'Wednesday Series',
-      buoys: [
-        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
-      ],
+      buoys: [Buoy(name: 'Start', position: const LatLng(41.88, -87.62))],
     );
 
     await tester.pumpWidget(
       MaterialApp(
-        home: MapScreen(
-          course: course,
-          positionSource: source,
-        ),
+        home: MapScreen(course: course, positionSource: source),
       ),
     );
     await tester.pumpAndSettle();

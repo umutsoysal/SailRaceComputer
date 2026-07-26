@@ -215,7 +215,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Map<String, List<CourseEntry>> _groupCoursesByName(
-      List<CourseEntry> entries) {
+    List<CourseEntry> entries,
+  ) {
     final grouped = <String, List<CourseEntry>>{};
     for (final entry in entries) {
       final key = _groupKeyForCourse(entry);
@@ -249,13 +250,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final saved = _courseEntries.where((entry) => !entry.isBundled).toList();
     final showRaces = _filter == LibraryContentMode.recordings;
     final showCourses = _filter == LibraryContentMode.courses;
-    final visibleRaces =
-        showRaces ? _applyRaceFilter(_raceEntries) : const <RaceSessionEntry>[];
-    final visibleSaved =
-        showCourses ? _applyCourseFilter(saved) : const <CourseEntry>[];
-    final visibleBundled =
-        showCourses ? _applyCourseFilter(bundled) : const <CourseEntry>[];
-    final hasAnyEntries = visibleBundled.isNotEmpty ||
+    final visibleRaces = showRaces
+        ? _applyRaceFilter(_raceEntries)
+        : const <RaceSessionEntry>[];
+    final visibleSaved = showCourses
+        ? _applyCourseFilter(saved)
+        : const <CourseEntry>[];
+    final visibleBundled = showCourses
+        ? _applyCourseFilter(bundled)
+        : const <CourseEntry>[];
+    final hasAnyEntries =
+        visibleBundled.isNotEmpty ||
         visibleSaved.isNotEmpty ||
         visibleRaces.isNotEmpty;
 
@@ -264,50 +269,50 @@ class _LibraryScreenState extends State<LibraryScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : !hasAnyEntries
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text(
-                      'No saved items yet. Save a course or finish a race to add it to the library.',
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _reload,
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(top: 8, bottom: 24),
-                    children: [
-                      _libraryControls(),
-                      if (_grouping == _LibraryGrouping.defaultView) ...[
-                        if (visibleRaces.isNotEmpty) ...[
-                          _sectionHeader(context, 'Recorded Races'),
-                          ...visibleRaces.map(_buildRaceRow),
-                        ],
-                        if (visibleSaved.isNotEmpty) ...[
-                          _sectionHeader(context, 'Saved Courses'),
-                          ...visibleSaved.map(_buildCourseRow),
-                        ],
-                        if (visibleBundled.isNotEmpty) ...[
-                          _sectionHeader(context, 'Bundled Courses'),
-                          ...visibleBundled.map(_buildCourseRow),
-                        ],
-                      ] else ...[
-                        if (visibleRaces.isNotEmpty)
-                          ..._buildGroupedRaceSections(visibleRaces),
-                        if (visibleSaved.isNotEmpty) ...[
-                          _sectionHeader(context, 'Saved Courses'),
-                          ..._buildGroupedCourseSections(visibleSaved),
-                        ],
-                        if (visibleBundled.isNotEmpty) ...[
-                          _sectionHeader(context, 'Bundled Courses'),
-                          ..._buildGroupedCourseSections(visibleBundled),
-                        ],
-                      ],
-                    ],
-                  ),
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'No saved items yet. Save a course or finish a race to add it to the library.',
+                  textAlign: TextAlign.center,
                 ),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _reload,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(top: 8, bottom: 24),
+                children: [
+                  _libraryControls(),
+                  if (_grouping == _LibraryGrouping.defaultView) ...[
+                    if (visibleRaces.isNotEmpty) ...[
+                      _sectionHeader(context, 'Recorded Races'),
+                      ...visibleRaces.map(_buildRaceRow),
+                    ],
+                    if (visibleSaved.isNotEmpty) ...[
+                      _sectionHeader(context, 'Saved Courses'),
+                      ...visibleSaved.map(_buildCourseRow),
+                    ],
+                    if (visibleBundled.isNotEmpty) ...[
+                      _sectionHeader(context, 'Bundled Courses'),
+                      ...visibleBundled.map(_buildCourseRow),
+                    ],
+                  ] else ...[
+                    if (visibleRaces.isNotEmpty)
+                      ..._buildGroupedRaceSections(visibleRaces),
+                    if (visibleSaved.isNotEmpty) ...[
+                      _sectionHeader(context, 'Saved Courses'),
+                      ..._buildGroupedCourseSections(visibleSaved),
+                    ],
+                    if (visibleBundled.isNotEmpty) ...[
+                      _sectionHeader(context, 'Bundled Courses'),
+                      ..._buildGroupedCourseSections(visibleBundled),
+                    ],
+                  ],
+                ],
+              ),
+            ),
     );
   }
 
@@ -343,10 +348,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
-              Text(
-                'Group by',
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
+              Text('Group by', style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 8),
               DropdownButtonFormField<_LibraryGrouping>(
                 initialValue: _grouping,
@@ -372,10 +374,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ),
               if (groupOptions.length > 1) ...[
                 const SizedBox(height: 12),
-                Text(
-                  'Filter',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
+                Text('Filter', style: Theme.of(context).textTheme.labelLarge),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String?>(
                   key: const Key('library-group-filter'),
@@ -411,14 +410,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _sectionHeader(BuildContext context, String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-        child: Text(
-          title,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+    child: Text(
+      title,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    ),
+  );
 
   List<Widget> _buildGroupedCourseSections(List<CourseEntry> entries) {
     final grouped = _groupCoursesByName(entries);
@@ -442,12 +441,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _subsectionHeader(String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
-        child: Text(
-          title,
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
+    child: Text(title, style: Theme.of(context).textTheme.titleSmall),
+  );
 
   Widget _buildCourseRow(CourseEntry entry) {
     final subtitle = entry.details?.trim().isNotEmpty == true
@@ -475,15 +471,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
           }
         },
         itemBuilder: (context) => [
-          const PopupMenuItem(
-            value: 'share',
-            child: Text('Share course'),
-          ),
+          const PopupMenuItem(value: 'share', child: Text('Share course')),
           if (!entry.isBundled)
-            const PopupMenuItem(
-              value: 'remove',
-              child: Text('Remove course'),
-            ),
+            const PopupMenuItem(value: 'remove', child: Text('Remove course')),
         ],
       ),
     );
@@ -516,13 +506,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           const SizedBox(height: 4),
                           Text(
                             entry.subtitle,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                           ),
                         ],
@@ -541,10 +529,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         }
                       },
                       itemBuilder: (context) => const [
-                        PopupMenuItem(
-                          value: 'share',
-                          child: Text('Share GPX'),
-                        ),
+                        PopupMenuItem(value: 'share', child: Text('Share GPX')),
                         PopupMenuItem(
                           value: 'remove',
                           child: Text('Remove race'),

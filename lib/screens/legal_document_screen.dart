@@ -24,8 +24,8 @@ class LegalDocumentScreen extends StatelessWidget {
           Text(
             effectiveDate,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
           const SizedBox(height: 12),
           Text(title, style: Theme.of(context).textTheme.headlineMedium),
@@ -51,10 +51,7 @@ class LegalDocumentScreen extends StatelessWidget {
 }
 
 class LegalDocumentSection {
-  const LegalDocumentSection({
-    required this.heading,
-    required this.paragraphs,
-  });
+  const LegalDocumentSection({required this.heading, required this.paragraphs});
 
   final String heading;
   final List<String> paragraphs;

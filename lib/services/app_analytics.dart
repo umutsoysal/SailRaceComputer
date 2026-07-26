@@ -46,34 +46,18 @@ class AppAnalytics {
   }
 
   void logTabSelected(String tabName) {
-    unawaited(
-      _logEvent(
-        'tab_selected',
-        parameters: {'tab_name': tabName},
-      ),
-    );
+    unawaited(_logEvent('tab_selected', parameters: {'tab_name': tabName}));
   }
 
   void logLibraryOpened({required String source}) {
-    unawaited(
-      _logEvent(
-        'library_opened',
-        parameters: {'source': source},
-      ),
-    );
+    unawaited(_logEvent('library_opened', parameters: {'source': source}));
   }
 
-  void logCourseSaved({
-    required int buoyCount,
-    required String source,
-  }) {
+  void logCourseSaved({required int buoyCount, required String source}) {
     unawaited(
       _logEvent(
         'course_saved',
-        parameters: {
-          'buoy_count': buoyCount,
-          'source': source,
-        },
+        parameters: {'buoy_count': buoyCount, 'source': source},
       ),
     );
   }
@@ -114,10 +98,7 @@ class AppAnalytics {
     );
   }
 
-  Future<void> _logEvent(
-    String name, {
-    Map<String, Object>? parameters,
-  }) async {
+  Future<void> _logEvent(String name, {Map<String, Object>? parameters}) async {
     final analytics = _analytics;
     if (analytics == null) return;
 

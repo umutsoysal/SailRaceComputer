@@ -22,7 +22,8 @@ double distanceMeters(LatLng a, LatLng b) {
   final dLng = _toRad(b.lng - a.lng);
   final lat1 = _toRad(a.lat);
   final lat2 = _toRad(b.lat);
-  final h = math.sin(dLat / 2) * math.sin(dLat / 2) +
+  final h =
+      math.sin(dLat / 2) * math.sin(dLat / 2) +
       math.cos(lat1) * math.cos(lat2) * math.sin(dLng / 2) * math.sin(dLng / 2);
   final c = 2 * math.atan2(math.sqrt(h), math.sqrt(1 - h));
   return _earthRadiusM * c;
@@ -34,11 +35,16 @@ LatLng destinationPoint(LatLng start, double distanceM, double bearingDeg) {
   final lat1 = _toRad(start.lat);
   final lng1 = _toRad(start.lng);
   final dr = distanceM / _earthRadiusM;
-  final lat2 = math.asin(math.sin(lat1) * math.cos(dr) +
-      math.cos(lat1) * math.sin(dr) * math.cos(br));
-  final lng2 = lng1 +
-      math.atan2(math.sin(br) * math.sin(dr) * math.cos(lat1),
-          math.cos(dr) - math.sin(lat1) * math.sin(lat2));
+  final lat2 = math.asin(
+    math.sin(lat1) * math.cos(dr) +
+        math.cos(lat1) * math.sin(dr) * math.cos(br),
+  );
+  final lng2 =
+      lng1 +
+      math.atan2(
+        math.sin(br) * math.sin(dr) * math.cos(lat1),
+        math.cos(dr) - math.sin(lat1) * math.sin(lat2),
+      );
   return LatLng(_toDeg(lat2), ((_toDeg(lng2) + 540) % 360) - 180);
 }
 
@@ -51,7 +57,8 @@ double bearingDegrees(LatLng a, LatLng b) {
   final lat2 = _toRad(b.lat);
   final dLng = _toRad(b.lng - a.lng);
   final y = math.sin(dLng) * math.cos(lat2);
-  final x = math.cos(lat1) * math.sin(lat2) -
+  final x =
+      math.cos(lat1) * math.sin(lat2) -
       math.sin(lat1) * math.cos(lat2) * math.cos(dLng);
   final brng = _toDeg(math.atan2(y, x));
   return (brng + 360.0) % 360.0;

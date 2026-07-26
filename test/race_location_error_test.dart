@@ -146,245 +146,222 @@ void main() {
   });
 
   Position makePosition() => Position(
-        latitude: 41.88,
-        longitude: -87.62,
-        timestamp: DateTime(2024, 6, 1),
-        accuracy: 5,
-        altitude: 0,
-        altitudeAccuracy: 0,
-        heading: 45,
-        headingAccuracy: 0,
-        speed: 2.6,
-        speedAccuracy: 0,
+    latitude: 41.88,
+    longitude: -87.62,
+    timestamp: DateTime(2024, 6, 1),
+    accuracy: 5,
+    altitude: 0,
+    altitudeAccuracy: 0,
+    heading: 45,
+    headingAccuracy: 0,
+    speed: 2.6,
+    speedAccuracy: 0,
+  );
+
+  testWidgets(
+    'shows permission error and settings action when location is denied',
+    (tester) async {
+      final course = Course(
+        name: 'Harbor Start',
+        buoys: [Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62))],
       );
 
-  testWidgets(
-      'shows permission error and settings action when location is denied', (
-    tester,
-  ) async {
-    final course = Course(
-      name: 'Harbor Start',
-      buoys: [
-        Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62)),
-      ],
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: RaceScreen(
-          course: course,
-          positionSource: _ErrorPositionSource(locationPermissionDeniedMessage),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RaceScreen(
+            course: course,
+            positionSource: _ErrorPositionSource(
+              locationPermissionDeniedMessage,
+            ),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Location Access Needed'), findsOneWidget);
-    expect(find.text('Open Settings'), findsWidgets);
-    expect(
-      find.text(
-        'Allow Race Mate to access your location so it can record the race.',
-      ),
-      findsOneWidget,
-    );
-  });
+      expect(find.text('Location Access Needed'), findsOneWidget);
+      expect(find.text('Open Settings'), findsWidgets);
+      expect(
+        find.text(
+          'Allow Race Mate to access your location so it can record the race.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets(
-      'shows acquiring gps during initial warm-up and does not show no gps signal before first fix',
-      (
-    tester,
-  ) async {
-    final source = _DelayedPositionSource();
-    final course = Course(
-      name: 'Harbor Start',
-      buoys: [
-        Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62)),
-      ],
-    );
+    'shows acquiring gps during initial warm-up and does not show no gps signal before first fix',
+    (tester) async {
+      final source = _DelayedPositionSource();
+      final course = Course(
+        name: 'Harbor Start',
+        buoys: [Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62))],
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: RaceScreen(
-          course: course,
-          positionSource: source,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RaceScreen(course: course, positionSource: source),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
-    await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
+      await tester.pump();
 
-    expect(find.text('Acquiring GPS...'), findsOneWidget);
-    expect(find.text('No GPS Signal'), findsNothing);
+      expect(find.text('Acquiring GPS...'), findsOneWidget);
+      expect(find.text('No GPS Signal'), findsNothing);
 
-    await tester.pump(const Duration(seconds: 7));
-    expect(find.text('Acquiring GPS...'), findsOneWidget);
-    expect(find.text('No GPS Signal'), findsNothing);
+      await tester.pump(const Duration(seconds: 7));
+      expect(find.text('Acquiring GPS...'), findsOneWidget);
+      expect(find.text('No GPS Signal'), findsNothing);
 
-    await tester.pump(const Duration(seconds: 2));
-    expect(find.text('Acquiring GPS...'), findsOneWidget);
-    expect(find.text('No GPS Signal'), findsNothing);
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.text('Acquiring GPS...'), findsOneWidget);
+      expect(find.text('No GPS Signal'), findsNothing);
 
-    source.emit(makePosition());
-    await tester.pump();
-    await tester.idle();
-    await tester.pump();
+      source.emit(makePosition());
+      await tester.pump();
+      await tester.idle();
+      await tester.pump();
 
-    expect(find.text('Acquiring GPS...'), findsNothing);
-    expect(find.text('No GPS Signal'), findsNothing);
-  });
+      expect(find.text('Acquiring GPS...'), findsNothing);
+      expect(find.text('No GPS Signal'), findsNothing);
+    },
+  );
 
   testWidgets(
-      'shows no gps signal only after a real fix has been lost for the timeout window',
-      (
-    tester,
-  ) async {
-    final source = _DelayedPositionSource();
-    final course = Course(
-      name: 'Harbor Start',
-      buoys: [
-        Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62)),
-      ],
-    );
+    'shows no gps signal only after a real fix has been lost for the timeout window',
+    (tester) async {
+      final source = _DelayedPositionSource();
+      final course = Course(
+        name: 'Harbor Start',
+        buoys: [Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62))],
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: RaceScreen(
-          course: course,
-          positionSource: source,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RaceScreen(course: course, positionSource: source),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
-    await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
+      await tester.pump();
 
-    source.emit(makePosition());
-    await tester.pump();
-    await tester.idle();
-    await tester.pump();
+      source.emit(makePosition());
+      await tester.pump();
+      await tester.idle();
+      await tester.pump();
 
-    expect(find.text('Acquiring GPS...'), findsNothing);
-    expect(find.text('No GPS Signal'), findsNothing);
+      expect(find.text('Acquiring GPS...'), findsNothing);
+      expect(find.text('No GPS Signal'), findsNothing);
 
-    await tester.pump(const Duration(seconds: 7));
-    expect(find.text('No GPS Signal'), findsNothing);
+      await tester.pump(const Duration(seconds: 7));
+      expect(find.text('No GPS Signal'), findsNothing);
 
-    await tester.pump(const Duration(seconds: 2));
-    expect(find.text('No GPS Signal'), findsOneWidget);
-  });
-
-  testWidgets('uses an initial gps fix before the live stream produces updates',
-      (
-    tester,
-  ) async {
-    final course = Course(
-      name: 'Harbor Start',
-      buoys: [
-        Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62)),
-      ],
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: RaceScreen(
-          course: course,
-          positionSource: _InitialFixOnlyPositionSource(makePosition()),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
-    await tester.pump();
-    await tester.idle();
-    await tester.pump();
-
-    expect(find.text('Acquiring GPS...'), findsNothing);
-    expect(find.text('No GPS Signal'), findsNothing);
-    expect(find.textContaining('±'), findsWidgets);
-  });
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.text('No GPS Signal'), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      'uses a recovery gps sample before showing no gps signal when the stream goes quiet',
-      (
-    tester,
-  ) async {
-    final course = Course(
-      name: 'Harbor Start',
-      buoys: [
-        Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62)),
-      ],
-    );
+    'uses an initial gps fix before the live stream produces updates',
+    (tester) async {
+      final course = Course(
+        name: 'Harbor Start',
+        buoys: [Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62))],
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: RaceScreen(
-          course: course,
-          positionSource: _RecoveryOnlyPositionSource(makePosition()),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RaceScreen(
+            course: course,
+            positionSource: _InitialFixOnlyPositionSource(makePosition()),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
-    await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
+      await tester.pump();
+      await tester.idle();
+      await tester.pump();
 
-    expect(find.text('Acquiring GPS...'), findsOneWidget);
-
-    await tester.pump(const Duration(seconds: 8));
-    await tester.idle();
-    await tester.pump();
-
-    expect(find.text('Acquiring GPS...'), findsNothing);
-    expect(find.text('No GPS Signal'), findsNothing);
-    expect(find.textContaining('±'), findsWidgets);
-  });
+      expect(find.text('Acquiring GPS...'), findsNothing);
+      expect(find.text('No GPS Signal'), findsNothing);
+      expect(find.textContaining('±'), findsWidgets);
+    },
+  );
 
   testWidgets(
-      'ignores transient iOS location-unknown stream errors while waiting for a fix',
-      (
-    tester,
-  ) async {
-    final source = _TransientErrorThenFixPositionSource(makePosition());
-    final course = Course(
-      name: 'Harbor Start',
-      buoys: [
-        Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62)),
-      ],
-    );
+    'uses a recovery gps sample before showing no gps signal when the stream goes quiet',
+    (tester) async {
+      final course = Course(
+        name: 'Harbor Start',
+        buoys: [Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62))],
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: RaceScreen(
-          course: course,
-          positionSource: source,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RaceScreen(
+            course: course,
+            positionSource: _RecoveryOnlyPositionSource(makePosition()),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
-    await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
+      await tester.pump();
 
-    source.emitTransientError();
-    await tester.pump();
+      expect(find.text('Acquiring GPS...'), findsOneWidget);
 
-    expect(find.text('Acquiring GPS...'), findsOneWidget);
-    expect(find.text('No GPS Signal'), findsNothing);
-    expect(find.textContaining('kCLErrorDomain error 1'), findsNothing);
+      await tester.pump(const Duration(seconds: 8));
+      await tester.idle();
+      await tester.pump();
 
-    source.emitFix();
-    await tester.pump();
-    await tester.idle();
-    await tester.pump();
+      expect(find.text('Acquiring GPS...'), findsNothing);
+      expect(find.text('No GPS Signal'), findsNothing);
+      expect(find.textContaining('±'), findsWidgets);
+    },
+  );
 
-    expect(find.text('Acquiring GPS...'), findsNothing);
-    expect(find.textContaining('±'), findsWidgets);
-  });
+  testWidgets(
+    'ignores transient iOS location-unknown stream errors while waiting for a fix',
+    (tester) async {
+      final source = _TransientErrorThenFixPositionSource(makePosition());
+      final course = Course(
+        name: 'Harbor Start',
+        buoys: [Buoy(name: 'Alpha', position: const LatLng(41.90, -87.62))],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RaceScreen(course: course, positionSource: source),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
+      await tester.pump();
+
+      source.emitTransientError();
+      await tester.pump();
+
+      expect(find.text('Acquiring GPS...'), findsOneWidget);
+      expect(find.text('No GPS Signal'), findsNothing);
+      expect(find.textContaining('kCLErrorDomain error 1'), findsNothing);
+
+      source.emitFix();
+      await tester.pump();
+      await tester.idle();
+      await tester.pump();
+
+      expect(find.text('Acquiring GPS...'), findsNothing);
+      expect(find.textContaining('±'), findsWidgets);
+    },
+  );
 }

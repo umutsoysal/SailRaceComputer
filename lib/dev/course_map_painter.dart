@@ -31,11 +31,7 @@ class CourseMapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     _proj = _Projection.fit(
-      points: [
-        ...course.buoys.map((b) => b.position),
-        boat,
-        ...track,
-      ],
+      points: [...course.buoys.map((b) => b.position), boat, ...track],
       size: size,
       paddingPx: paddingPx,
       minSpanMeters: minSpanMeters,
@@ -179,7 +175,11 @@ class CourseMapPainter extends CustomPainter {
   }
 
   void _drawArrowHead(
-      Canvas canvas, Offset tip, double headingDeg, Color color) {
+    Canvas canvas,
+    Offset tip,
+    double headingDeg,
+    Color color,
+  ) {
     final rad = (headingDeg - 90) * math.pi / 180.0;
     final left =
         tip + Offset(math.cos(rad + 2.6) * 10, math.sin(rad + 2.6) * 10);
@@ -198,7 +198,10 @@ class CourseMapPainter extends CustomPainter {
       text: TextSpan(
         text: text,
         style: const TextStyle(
-            color: Colors.black87, fontSize: 12, fontWeight: FontWeight.w600),
+          color: Colors.black87,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
@@ -233,8 +236,9 @@ class CourseMapPainter extends CustomPainter {
   }
 
   double _niceRound(double v) {
-    final exp =
-        math.pow(10, v.toString().split('.').first.length - 1).toDouble();
+    final exp = math
+        .pow(10, v.toString().split('.').first.length - 1)
+        .toDouble();
     for (final mul in const [1, 2, 5, 10]) {
       final candidate = mul * exp;
       if (candidate >= v) return candidate.toDouble();
@@ -248,7 +252,9 @@ class CourseMapPainter extends CustomPainter {
       double d = 0;
       while (d < m.length) {
         out.addPath(
-            m.extractPath(d, math.min(d + dash, m.length)), Offset.zero);
+          m.extractPath(d, math.min(d + dash, m.length)),
+          Offset.zero,
+        );
         d += dash + gap;
       }
     }
@@ -315,10 +321,14 @@ class _Projection {
     final metersPerDegLat = 111320.0;
     final metersPerDegLng = 111320.0 * math.cos(centerLat * math.pi / 180.0);
 
-    var spanMetersX =
-        math.max((maxLng - minLng) * metersPerDegLng, minSpanMeters);
-    var spanMetersY =
-        math.max((maxLat - minLat) * metersPerDegLat, minSpanMeters);
+    var spanMetersX = math.max(
+      (maxLng - minLng) * metersPerDegLng,
+      minSpanMeters,
+    );
+    var spanMetersY = math.max(
+      (maxLat - minLat) * metersPerDegLat,
+      minSpanMeters,
+    );
     if (spanMetersX == 0) spanMetersX = minSpanMeters;
     if (spanMetersY == 0) spanMetersY = minSpanMeters;
 

@@ -21,7 +21,8 @@ Future<void> _launchFeedbackEmail(BuildContext context) async {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-              'Could not open email app. Send feedback to usailfasttech+feedback@gmail.com'),
+            'Could not open email app. Send feedback to usailfasttech+feedback@gmail.com',
+          ),
         ),
       );
     }
@@ -245,8 +246,9 @@ class _AppVersionCard extends StatelessWidget {
         return Card(
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor:
-                  Theme.of(context).colorScheme.surfaceContainerHighest,
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest,
               child: const Icon(Icons.info_outline),
             ),
             title: const Text('App Version'),
@@ -259,9 +261,7 @@ class _AppVersionCard extends StatelessWidget {
 }
 
 class _AppVersionInfo {
-  const _AppVersionInfo({
-    required this.marketing,
-  });
+  const _AppVersionInfo({required this.marketing});
 
   final String marketing;
 
@@ -269,7 +269,9 @@ class _AppVersionInfo {
     final raw = await rootBundle.loadString('app_version.json');
     final decoded = jsonDecode(raw);
     if (decoded is! Map<String, dynamic>) {
-      throw const FormatException('app_version.json must contain a JSON object.');
+      throw const FormatException(
+        'app_version.json must contain a JSON object.',
+      );
     }
     final marketing = decoded['marketing'];
     final androidBuild = decoded['android_build'];
@@ -280,17 +282,12 @@ class _AppVersionInfo {
         !RegExp(r'^\d+\.\d+\.\d+$').hasMatch(marketing)) {
       throw const FormatException('app_version.json has invalid version data.');
     }
-    return _AppVersionInfo(
-      marketing: marketing,
-    );
+    return _AppVersionInfo(marketing: marketing);
   }
 }
 
 class _HeroCard extends StatelessWidget {
-  const _HeroCard({
-    required this.title,
-    required this.message,
-  });
+  const _HeroCard({required this.title, required this.message});
 
   final String title;
   final String message;
@@ -302,10 +299,7 @@ class _HeroCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            colors.primaryContainer,
-            colors.surfaceContainerHighest,
-          ],
+          colors: [colors.primaryContainer, colors.surfaceContainerHighest],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -324,10 +318,7 @@ class _HeroCard extends StatelessWidget {
 }
 
 class _SettingsSection extends StatelessWidget {
-  const _SettingsSection({
-    required this.title,
-    required this.items,
-  });
+  const _SettingsSection({required this.title, required this.items});
 
   final String title;
   final List<_SettingsItem> items;
@@ -342,8 +333,8 @@ class _SettingsSection extends StatelessWidget {
           child: Text(
             title,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -381,9 +372,7 @@ class _SettingsTile extends StatelessWidget {
       onTap: () {
         final destination = item.destination;
         if (destination != null) {
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: destination));
+          Navigator.of(context).push(MaterialPageRoute(builder: destination));
           return;
         }
         final action = item.action;

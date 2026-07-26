@@ -10,11 +10,7 @@ import '../widgets/course_map_painter.dart';
 /// Displays the racecourse as a top-down map with the boat's live GPS
 /// position overlaid when available.
 class MapScreen extends StatefulWidget {
-  const MapScreen({
-    super.key,
-    required this.course,
-    this.positionSource,
-  });
+  const MapScreen({super.key, required this.course, this.positionSource});
 
   final Course course;
 
@@ -63,15 +59,15 @@ class _MapScreenState extends State<MapScreen> {
             Text(
               'Map',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    letterSpacing: 0.8,
-                    fontWeight: FontWeight.w700,
-                  ),
+                letterSpacing: 0.8,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             Text(
               widget.course.name,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               overflow: TextOverflow.ellipsis,
             ),
           ],
@@ -167,8 +163,8 @@ class _MapScreenState extends State<MapScreen> {
     final actionLabel = isLocationServicesDisabledError(error)
         ? 'Open Location Services'
         : isLocationPermissionError(error)
-            ? 'Open Settings'
-            : 'Retry';
+        ? 'Open Settings'
+        : 'Retry';
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 420),

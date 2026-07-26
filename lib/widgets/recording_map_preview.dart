@@ -22,8 +22,9 @@ class RecordingMapPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final track = _track;
-    final lastPoint =
-        entry.record.track.isNotEmpty ? entry.record.track.last : null;
+    final lastPoint = entry.record.track.isNotEmpty
+        ? entry.record.track.last
+        : null;
     final boat = track.isNotEmpty ? track.last : null;
     return SizedBox(
       height: height,
@@ -77,10 +78,7 @@ class RecordingMapPreview extends StatelessWidget {
 }
 
 class _PreviewBadge extends StatelessWidget {
-  const _PreviewBadge({
-    required this.icon,
-    required this.label,
-  });
+  const _PreviewBadge({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
@@ -108,9 +106,9 @@ class _PreviewBadge extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
           ],
         ),

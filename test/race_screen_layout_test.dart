@@ -45,19 +45,18 @@ Position _makePosition({
   double speed = 2.6,
   double heading = 45.0,
   double accuracy = 5.0,
-}) =>
-    Position(
-      latitude: lat,
-      longitude: lng,
-      timestamp: DateTime(2024, 6, 1),
-      accuracy: accuracy,
-      altitude: 0,
-      altitudeAccuracy: 0,
-      heading: heading,
-      headingAccuracy: 0,
-      speed: speed,
-      speedAccuracy: 0,
-    );
+}) => Position(
+  latitude: lat,
+  longitude: lng,
+  timestamp: DateTime(2024, 6, 1),
+  accuracy: accuracy,
+  altitude: 0,
+  altitudeAccuracy: 0,
+  heading: heading,
+  headingAccuracy: 0,
+  speed: speed,
+  speedAccuracy: 0,
+);
 
 Widget _buildRaceScreen({
   required Course course,
@@ -199,8 +198,9 @@ void main() {
         _buildRaceScreen(course: course, fix: fix, screenSize: landscape),
       );
       await tester.pumpAndSettle();
-      await tester
-          .ensureVisible(find.widgetWithText(FilledButton, 'Start race'));
+      await tester.ensureVisible(
+        find.widgetWithText(FilledButton, 'Start race'),
+      );
       await tester.tap(find.widgetWithText(FilledButton, 'Start race'));
       await _drainAsyncUi(tester);
 

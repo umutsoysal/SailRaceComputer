@@ -93,8 +93,8 @@ class GeolocatorPositionSource implements PositionSource {
       final lastKnown = await Geolocator.getLastKnownPosition();
       if (lastKnown == null) return null;
       final age = DateTime.now().toUtc().difference(
-            lastKnown.timestamp.toUtc(),
-          );
+        lastKnown.timestamp.toUtc(),
+      );
       return age <= maxAge ? lastKnown : null;
     } catch (_) {
       return null;
@@ -121,18 +121,19 @@ class GeolocatorPositionSource implements PositionSource {
       onCancel: () => _sub?.pause(),
       onListen: () => _sub?.resume(),
     );
-    _sub ??= Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 0,
-      ),
-    ).listen(
-      c.add,
-      onError: (error) {
-        if (isTransientLocationStreamError(error)) return;
-        c.addError(error);
-      },
-    );
+    _sub ??=
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.bestForNavigation,
+            distanceFilter: 0,
+          ),
+        ).listen(
+          c.add,
+          onError: (error) {
+            if (isTransientLocationStreamError(error)) return;
+            c.addError(error);
+          },
+        );
     return c.stream;
   }
 

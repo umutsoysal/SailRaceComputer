@@ -9,9 +9,9 @@ class BoatSimulator extends ChangeNotifier {
     required LatLng startPosition,
     double headingDeg = 0,
     double speedKnots = 5,
-  })  : _position = startPosition,
-        _headingDeg = headingDeg,
-        _speedKnots = speedKnots;
+  }) : _position = startPosition,
+       _headingDeg = headingDeg,
+       _speedKnots = speedKnots;
 
   LatLng _position;
   double _headingDeg;
@@ -33,8 +33,10 @@ class BoatSimulator extends ChangeNotifier {
   void start() {
     if (_running) return;
     _running = true;
-    _timer =
-        Timer.periodic(const Duration(milliseconds: _tickMs), (_) => _tick());
+    _timer = Timer.periodic(
+      const Duration(milliseconds: _tickMs),
+      (_) => _tick(),
+    );
     notifyListeners();
   }
 

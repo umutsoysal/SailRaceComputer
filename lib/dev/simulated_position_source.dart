@@ -37,19 +37,21 @@ class SimulatedPositionSource implements PositionSource {
   @override
   Stream<Position> get stream {
     _listener ??= () {
-      _ctrl.add(Position(
-        longitude: sim.position.lng,
-        latitude: sim.position.lat,
-        timestamp: DateTime.now(),
-        accuracy: 3.0,
-        altitude: 0.0,
-        altitudeAccuracy: 0.0,
-        heading: sim.headingDeg,
-        headingAccuracy: 0.0,
-        speed: sim.speedMs,
-        speedAccuracy: 0.0,
-        isMocked: true,
-      ));
+      _ctrl.add(
+        Position(
+          longitude: sim.position.lng,
+          latitude: sim.position.lat,
+          timestamp: DateTime.now(),
+          accuracy: 3.0,
+          altitude: 0.0,
+          altitudeAccuracy: 0.0,
+          heading: sim.headingDeg,
+          headingAccuracy: 0.0,
+          speed: sim.speedMs,
+          speedAccuracy: 0.0,
+          isMocked: true,
+        ),
+      );
     };
     sim.addListener(_listener!);
     // Emit one fix right away so the consumer doesn't sit on a spinner.

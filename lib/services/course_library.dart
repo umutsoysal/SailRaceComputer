@@ -59,24 +59,27 @@ class CourseLibrary {
   Future<List<CourseEntry>> listBundled() async {
     try {
       final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
-      final keys = manifest
-          .listAssets()
-          .where((k) => k.startsWith(_assetDir) && k.endsWith('.json'))
-          .toList()
-        ..sort();
+      final keys =
+          manifest
+              .listAssets()
+              .where((k) => k.startsWith(_assetDir) && k.endsWith('.json'))
+              .toList()
+            ..sort();
       final entries = <CourseEntry>[];
       for (final k in keys) {
         try {
           final raw = await rootBundle.loadString(k);
           final bundle = CourseFile.decodeBundle(raw);
           for (final imported in bundle.courses) {
-            entries.add(CourseEntry(
-              id: 'asset:$k#${imported.id}',
-              source: CourseSource.bundled,
-              course: imported.course,
-              groupName: _bundledGroupName(bundle, imported),
-              details: imported.summary,
-            ));
+            entries.add(
+              CourseEntry(
+                id: 'asset:$k#${imported.id}',
+                source: CourseSource.bundled,
+                course: imported.course,
+                groupName: _bundledGroupName(bundle, imported),
+                details: imported.summary,
+              ),
+            );
           }
         } catch (_) {
           // Skip malformed asset; don't break the library.
@@ -122,8 +125,8 @@ class CourseLibrary {
     final list = (raw == null || raw.isEmpty)
         ? <Map<String, dynamic>>[]
         : (jsonDecode(raw) as List<dynamic>)
-            .cast<Map<String, dynamic>>()
-            .toList();
+              .cast<Map<String, dynamic>>()
+              .toList();
 
     final newId = id ?? 'saved:${DateTime.now().microsecondsSinceEpoch}';
     final entryJson = CourseFile.encode(course);
@@ -135,11 +138,7 @@ class CourseLibrary {
       list.add(payload);
     }
     await prefs.setString(_key, jsonEncode(list));
-    return CourseEntry(
-      id: newId,
-      source: CourseSource.saved,
-      course: course,
-    );
+    return CourseEntry(id: newId, source: CourseSource.saved, course: course);
   }
 
   /// Removes a saved course by [id]. Bundled entries cannot be removed.

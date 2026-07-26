@@ -42,8 +42,10 @@ class _AppShellState extends State<AppShell> {
   var _libraryVersion = 0;
   var _raceRecording = false;
 
-  final _navDestinationKeys =
-      List.generate(5, (i) => GlobalKey(debugLabel: 'nav-destination-$i'));
+  final _navDestinationKeys = List.generate(
+    5,
+    (i) => GlobalKey(debugLabel: 'nav-destination-$i'),
+  );
 
   @override
   void initState() {
@@ -63,37 +65,43 @@ class _AppShellState extends State<AppShell> {
       steps: [
         const HelpTourStep(
           title: 'Welcome to Race Mate',
-          body: 'Here is a quick tour of the main tabs. '
+          body:
+              'Here is a quick tour of the main tabs. '
               'Tap anywhere to continue, or skip at any time.',
         ),
         HelpTourStep(
           targetKey: _navDestinationKeys[0],
           title: 'Courses',
-          body: 'Set up your racecourse: add and edit buoys, and share or '
+          body:
+              'Set up your racecourse: add and edit buoys, and share or '
               'import course files with your crew.',
         ),
         HelpTourStep(
           targetKey: _navDestinationKeys[1],
           title: 'Map',
-          body: 'See the course top-down with your live GPS position '
+          body:
+              'See the course top-down with your live GPS position '
               'overlaid. Pinch to zoom and pan around.',
         ),
         HelpTourStep(
           targetKey: _navDestinationKeys[2],
           title: 'Race',
-          body: 'Race day lives here: live speed and headings, plus track '
+          body:
+              'Race day lives here: live speed and headings, plus track '
               'recording. The tab glows orange while recording.',
         ),
         HelpTourStep(
           targetKey: _navDestinationKeys[3],
           title: 'Recordings',
-          body: 'Review past races and load a recorded course back into '
+          body:
+              'Review past races and load a recorded course back into '
               'the editor.',
         ),
         HelpTourStep(
           targetKey: _navDestinationKeys[4],
           title: 'Settings',
-          body: 'Preferences, feedback, and legal info. You can replay '
+          body:
+              'Preferences, feedback, and legal info. You can replay '
               'this tour from here anytime.',
         ),
       ],
@@ -210,10 +218,7 @@ class _AppShellState extends State<AppShell> {
 }
 
 class _RaceTabIcon extends StatelessWidget {
-  const _RaceTabIcon({
-    required this.isHighlighted,
-    required this.isSelected,
-  });
+  const _RaceTabIcon({required this.isHighlighted, required this.isSelected});
 
   static const _recordOrange = Color(0xFFFC4C02);
 
@@ -232,10 +237,7 @@ class _RaceTabIcon extends StatelessWidget {
             ? 'race-tab-recording-selected'
             : 'race-tab-recording-indicator',
       ),
-      decoration: BoxDecoration(
-        color: _recordOrange,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: _recordOrange, shape: BoxShape.circle),
       child: SizedBox.square(
         dimension: 22,
         child: Center(

@@ -45,19 +45,18 @@ Position _makePosition({
   double speed = 2.6,
   double heading = 45.0,
   double accuracy = 5.0,
-}) =>
-    Position(
-      latitude: lat,
-      longitude: lng,
-      timestamp: DateTime(2024, 6, 1),
-      accuracy: accuracy,
-      altitude: 0,
-      altitudeAccuracy: 0,
-      heading: heading,
-      headingAccuracy: 0,
-      speed: speed,
-      speedAccuracy: 0,
-    );
+}) => Position(
+  latitude: lat,
+  longitude: lng,
+  timestamp: DateTime(2024, 6, 1),
+  accuracy: accuracy,
+  altitude: 0,
+  altitudeAccuracy: 0,
+  heading: heading,
+  headingAccuracy: 0,
+  speed: speed,
+  speedAccuracy: 0,
+);
 
 Future<void> _drainAsyncUi(WidgetTester tester) async {
   await tester.pump();
@@ -71,32 +70,31 @@ void main() {
   });
 
   testWidgets(
-      'race tab stays between map and recordings in the bottom navigation bar',
-      (
-    tester,
-  ) async {
-    final course = Course(
-      name: 'Wednesday Series',
-      buoys: [
-        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
-        Buoy(name: 'Finish', position: const LatLng(41.89, -87.61)),
-      ],
-    );
+    'race tab stays between map and recordings in the bottom navigation bar',
+    (tester) async {
+      final course = Course(
+        name: 'Wednesday Series',
+        buoys: [
+          Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
+          Buoy(name: 'Finish', position: const LatLng(41.89, -87.61)),
+        ],
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: AppShell(course: course, onCourseChanged: (_) {}),
-      ),
-    );
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AppShell(course: course, onCourseChanged: (_) {}),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    final mapCenter = tester.getCenter(find.text('Map'));
-    final raceCenter = tester.getCenter(find.text('Race'));
-    final recordingsCenter = tester.getCenter(find.text('Recordings'));
+      final mapCenter = tester.getCenter(find.text('Map'));
+      final raceCenter = tester.getCenter(find.text('Race'));
+      final recordingsCenter = tester.getCenter(find.text('Recordings'));
 
-    expect(raceCenter.dx, greaterThan(mapCenter.dx));
-    expect(raceCenter.dx, lessThan(recordingsCenter.dx));
-  });
+      expect(raceCenter.dx, greaterThan(mapCenter.dx));
+      expect(raceCenter.dx, lessThan(recordingsCenter.dx));
+    },
+  );
 
   testWidgets('race tab stays highlighted while recording is active', (
     tester,
@@ -120,10 +118,7 @@ void main() {
     );
     await _drainAsyncUi(tester);
 
-    expect(
-      find.byKey(const Key('race-tab-recording-indicator')),
-      findsNothing,
-    );
+    expect(find.byKey(const Key('race-tab-recording-indicator')), findsNothing);
 
     await tester.tap(find.text('Race'));
     await _drainAsyncUi(tester);
@@ -156,13 +151,7 @@ void main() {
     await _drainAsyncUi(tester);
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(
-      find.byKey(const Key('race-tab-recording-indicator')),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const Key('race-tab-recording-selected')),
-      findsNothing,
-    );
+    expect(find.byKey(const Key('race-tab-recording-indicator')), findsNothing);
+    expect(find.byKey(const Key('race-tab-recording-selected')), findsNothing);
   });
 }

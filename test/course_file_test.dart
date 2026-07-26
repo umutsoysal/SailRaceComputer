@@ -6,10 +6,13 @@ import 'package:sail_race_computer/utils/geo.dart';
 
 void main() {
   group('CourseFile', () {
-    final sample = Course(name: 'Test Course', buoys: [
-      Buoy(name: 'A', position: const LatLng(10, 20), roundingRadiusM: 30),
-      Buoy(name: 'B', position: const LatLng(11, 21)),
-    ]);
+    final sample = Course(
+      name: 'Test Course',
+      buoys: [
+        Buoy(name: 'A', position: const LatLng(10, 20), roundingRadiusM: 30),
+        Buoy(name: 'B', position: const LatLng(11, 21)),
+      ],
+    );
 
     test('round-trips through v2 encode/decode', () {
       final json = CourseFile.encode(sample, notes: 'hi');
@@ -25,8 +28,7 @@ void main() {
     });
 
     test('decodes legacy v1 files', () {
-      final decoded = CourseFile.decode(
-        '''
+      final decoded = CourseFile.decode('''
         {
           "format": "sail-race-course",
           "version": 1,
@@ -35,16 +37,14 @@ void main() {
             {"name": "Start", "lat": 41.8, "lng": -87.5}
           ]
         }
-        ''',
-      );
+        ''');
       expect(decoded.name, 'Legacy');
       expect(decoded.buoys.single.name, 'Start');
       expect(decoded.buoys.single.roundingRadiusM, 25);
     });
 
     test('decodes v2 route shorthand with reusable buoys', () {
-      final bundle = CourseFile.decodeBundle(
-        '''
+      final bundle = CourseFile.decodeBundle('''
         {
           "format": "sail-race-course",
           "version": 2,
@@ -63,8 +63,7 @@ void main() {
             }
           ]
         }
-        ''',
-      );
+        ''');
       expect(bundle.name, 'Series');
       expect(bundle.courses, hasLength(1));
       final imported = bundle.courses.single;
@@ -76,8 +75,7 @@ void main() {
     });
 
     test('decodes v2 turns and decodeAll returns each course', () {
-      final courses = CourseFile.decodeAll(
-        '''
+      final courses = CourseFile.decodeAll('''
         {
           "format": "sail-race-course",
           "version": 2,
@@ -106,8 +104,7 @@ void main() {
             }
           ]
         }
-        ''',
-      );
+        ''');
       expect(courses, hasLength(2));
       expect(courses.first.name, 'Short Course 1 (S1)');
       expect(courses.first.buoys, hasLength(4));
@@ -116,8 +113,7 @@ void main() {
 
     test('decode rejects multi-course files without a selection', () {
       expect(
-        () => CourseFile.decode(
-          '''
+        () => CourseFile.decode('''
           {
             "format": "sail-race-course",
             "version": 2,
@@ -130,37 +126,41 @@ void main() {
               {"id": "two", "route": ["a"]}
             ]
           }
-          ''',
-        ),
+          '''),
         throwsA(isA<CourseFileException>()),
       );
     });
 
     test('rejects unknown format', () {
       expect(
-          () => CourseFile.decode(
-              '{"format":"other","version":1,"name":"x","buoys":[]}'),
-          throwsA(isA<CourseFileException>()));
+        () => CourseFile.decode(
+          '{"format":"other","version":1,"name":"x","buoys":[]}',
+        ),
+        throwsA(isA<CourseFileException>()),
+      );
     });
 
     test('rejects unsupported version', () {
       expect(
-          () => CourseFile.decode(
-              '{"format":"sail-race-course","version":99,"name":"x","buoys":[]}'),
-          throwsA(isA<CourseFileException>()));
+        () => CourseFile.decode(
+          '{"format":"sail-race-course","version":99,"name":"x","buoys":[]}',
+        ),
+        throwsA(isA<CourseFileException>()),
+      );
     });
 
     test('rejects invalid lat/lng', () {
       expect(
-          () => CourseFile.decode(
-              '{"format":"sail-race-course","version":1,"name":"x","buoys":[{"name":"a","lat":200,"lng":0}]}'),
-          throwsA(isA<CourseFileException>()));
+        () => CourseFile.decode(
+          '{"format":"sail-race-course","version":1,"name":"x","buoys":[{"name":"a","lat":200,"lng":0}]}',
+        ),
+        throwsA(isA<CourseFileException>()),
+      );
     });
 
     test('rejects v2 route references to unknown buoys', () {
       expect(
-        () => CourseFile.decodeBundle(
-          '''
+        () => CourseFile.decodeBundle('''
           {
             "format": "sail-race-course",
             "version": 2,
@@ -170,15 +170,16 @@ void main() {
               {"id": "one", "route": ["missing"]}
             ]
           }
-          ''',
-        ),
+          '''),
         throwsA(isA<CourseFileException>()),
       );
     });
 
     test('rejects non-JSON', () {
-      expect(() => CourseFile.decode('not json at all'),
-          throwsA(isA<CourseFileException>()));
+      expect(
+        () => CourseFile.decode('not json at all'),
+        throwsA(isA<CourseFileException>()),
+      );
     });
 
     test('suggested filename is slugified', () {

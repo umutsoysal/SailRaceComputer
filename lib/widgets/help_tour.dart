@@ -8,11 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// When [targetKey] is null the card is centered with a plain scrim (used for
 /// the welcome step); otherwise the target widget is spotlighted.
 class HelpTourStep {
-  const HelpTourStep({
-    required this.title,
-    required this.body,
-    this.targetKey,
-  });
+  const HelpTourStep({required this.title, required this.body, this.targetKey});
 
   final String title;
   final String body;
@@ -122,8 +118,8 @@ class _HelpTourOverlayState extends State<_HelpTourOverlay> {
 
   void _measureTarget() {
     if (!mounted) return;
-    final renderObject =
-        widget.steps[_index].targetKey?.currentContext?.findRenderObject();
+    final renderObject = widget.steps[_index].targetKey?.currentContext
+        ?.findRenderObject();
     Rect? rect;
     if (renderObject is RenderBox &&
         renderObject.attached &&
@@ -162,8 +158,10 @@ class _HelpTourOverlayState extends State<_HelpTourOverlay> {
 
     const margin = 16.0;
     final width = math.min(340.0, screen.width - 2 * margin);
-    final left = (target.center.dx - width / 2)
-        .clamp(margin, screen.width - margin - width);
+    final left = (target.center.dx - width / 2).clamp(
+      margin,
+      screen.width - margin - width,
+    );
     final sized = SizedBox(width: width, child: card);
     // Place the card on whichever side of the target has more room.
     if (target.center.dy > screen.height / 2) {
@@ -243,14 +241,10 @@ class _SpotlightPainter extends CustomPainter {
       return;
     }
     final hole = Path()
-      ..addRRect(RRect.fromRectAndRadius(
-        t.inflate(6),
-        const Radius.circular(14),
-      ));
-    canvas.drawPath(
-      Path.combine(PathOperation.difference, scrim, hole),
-      paint,
-    );
+      ..addRRect(
+        RRect.fromRectAndRadius(t.inflate(6), const Radius.circular(14)),
+      );
+    canvas.drawPath(Path.combine(PathOperation.difference, scrim, hole), paint);
   }
 
   @override

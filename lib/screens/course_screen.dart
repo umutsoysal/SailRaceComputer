@@ -118,9 +118,9 @@ class _CourseScreenState extends State<CourseScreen> {
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _selectEntry(CourseEntry entry) async {
@@ -162,10 +162,7 @@ class _CourseScreenState extends State<CourseScreen> {
     if (name == null) return;
 
     final created = await _library.save(Course(name: name, buoys: []));
-    AppAnalytics.instance.logCourseSaved(
-      buoyCount: 0,
-      source: 'course_create',
-    );
+    AppAnalytics.instance.logCourseSaved(buoyCount: 0, source: 'course_create');
     await _reloadEntries();
     if (!mounted) return;
     setState(() => _course = _copyCourse(created.course));
@@ -201,8 +198,9 @@ class _CourseScreenState extends State<CourseScreen> {
     Course edited, {
     CourseEntry? sourceEntry,
   }) async {
-    final overwriteId =
-        sourceEntry != null && !sourceEntry.isBundled ? sourceEntry.id : null;
+    final overwriteId = sourceEntry != null && !sourceEntry.isBundled
+        ? sourceEntry.id
+        : null;
     final saved = await _library.save(edited, id: overwriteId);
     AppAnalytics.instance.logCourseSaved(
       buoyCount: edited.buoys.length,
@@ -540,12 +538,17 @@ class _CourseScreenState extends State<CourseScreen> {
   Widget _selectedCourseCard(BuildContext context) {
     final activeEntry = _activeEntry;
     final isBundled = activeEntry?.isBundled ?? false;
-    final title =
-        _isEmptyDraft ? 'Choose a course to get started' : _course.name;
+    final title = _isEmptyDraft
+        ? 'Choose a course to get started'
+        : _course.name;
     final subtitle = _isEmptyDraft
         ? 'Start with a bundled course, import one, or create your own.'
         : '${_course.buoys.length} mark${_course.buoys.length == 1 ? '' : 's'}'
-            '${activeEntry == null ? ' · draft' : isBundled ? ' · bundled' : ' · saved'}';
+              '${activeEntry == null
+                  ? ' · draft'
+                  : isBundled
+                  ? ' · bundled'
+                  : ' · saved'}';
 
     return Card(
       child: Padding(
@@ -556,8 +559,8 @@ class _CourseScreenState extends State<CourseScreen> {
             Text(
               'Selected course',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
             const SizedBox(height: 8),
             Text(title, style: Theme.of(context).textTheme.headlineSmall),
@@ -565,8 +568,8 @@ class _CourseScreenState extends State<CourseScreen> {
             Text(
               subtitle,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             if (isBundled) ...[
               const SizedBox(height: 10),
@@ -643,14 +646,14 @@ class _CourseScreenState extends State<CourseScreen> {
   }
 
   Widget _sectionHeader(BuildContext context, String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 6, 4, 8),
-        child: Text(
-          title,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(4, 6, 4, 8),
+    child: Text(
+      title,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    ),
+  );
 
   Widget _courseRow(BuildContext context, CourseEntry entry) {
     final active = _activeEntry?.id == entry.id;
@@ -670,16 +673,18 @@ class _CourseScreenState extends State<CourseScreen> {
           contentPadding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
           onTap: () => _selectEntry(entry),
           leading: CircleAvatar(
-            backgroundColor:
-                active ? colors.primary : colors.surfaceContainerHighest,
-            foregroundColor:
-                active ? colors.onPrimary : colors.onSurfaceVariant,
+            backgroundColor: active
+                ? colors.primary
+                : colors.surfaceContainerHighest,
+            foregroundColor: active
+                ? colors.onPrimary
+                : colors.onSurfaceVariant,
             child: Icon(
               active
                   ? Icons.check
                   : entry.isBundled
-                      ? Icons.inventory_2_outlined
-                      : Icons.bookmark_outline,
+                  ? Icons.inventory_2_outlined
+                  : Icons.bookmark_outline,
             ),
           ),
           title: Text(
@@ -699,9 +704,9 @@ class _CourseScreenState extends State<CourseScreen> {
                   child: Text(
                     'Active',
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: colors.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      color: colors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               PopupMenuButton<String>(
@@ -824,10 +829,7 @@ class _CourseEditorPageState extends State<_CourseEditorPage> {
             tooltip: 'Rename course',
             onPressed: _rename,
           ),
-          TextButton(
-            onPressed: _closeEditor,
-            child: const Text('Done'),
-          ),
+          TextButton(onPressed: _closeEditor, child: const Text('Done')),
         ],
       ),
       body: _course.buoys.isEmpty

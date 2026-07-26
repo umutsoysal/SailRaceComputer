@@ -7,11 +7,7 @@ void main() {
   testWidgets('shows the bundled app version on the settings screen', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: SettingsScreen(),
-      ),
-    );
+    await tester.pumpWidget(const MaterialApp(home: SettingsScreen()));
     await tester.pumpAndSettle();
 
     expect(find.text('App Version'), findsOneWidget);

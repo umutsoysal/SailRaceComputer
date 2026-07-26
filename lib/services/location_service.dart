@@ -9,8 +9,8 @@ class LocationService extends ChangeNotifier {
   LocationService({
     PositionSource? positionSource,
     this.signalTimeout = const Duration(seconds: 8),
-  })  : _source = positionSource ?? GeolocatorPositionSource(),
-        _ownsSource = positionSource == null;
+  }) : _source = positionSource ?? GeolocatorPositionSource(),
+       _ownsSource = positionSource == null;
 
   final PositionSource _source;
   final bool _ownsSource;

@@ -40,9 +40,7 @@ class ActiveRaceMetrics {
 }
 
 class CourseMetrics {
-  const CourseMetrics({
-    required this.totalDistanceMeters,
-  });
+  const CourseMetrics({required this.totalDistanceMeters});
 
   final double totalDistanceMeters;
 
@@ -107,15 +105,18 @@ ActiveRaceMetrics buildActiveRaceMetrics({
   required Buoy mark,
 }) {
   final position = fix == null ? null : LatLng(fix.latitude, fix.longitude);
-  final distance =
-      position == null ? null : distanceMeters(position, mark.position);
-  final bearing =
-      position == null ? null : bearingDegrees(position, mark.position);
+  final distance = position == null
+      ? null
+      : distanceMeters(position, mark.position);
+  final bearing = position == null
+      ? null
+      : bearingDegrees(position, mark.position);
   final speedMs = fix?.speed ?? 0.0;
   final headingDegrees = fix?.heading ?? 0.0;
   final vmg = bearing == null ? 0.0 : vmgMs(speedMs, headingDegrees, bearing);
-  final etaSeconds =
-      vmg > 0.05 && distance != null ? (distance / vmg).round() : null;
+  final etaSeconds = vmg > 0.05 && distance != null
+      ? (distance / vmg).round()
+      : null;
 
   return ActiveRaceMetrics(
     fix: fix,

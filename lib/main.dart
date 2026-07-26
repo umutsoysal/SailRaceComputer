@@ -51,9 +51,12 @@ class _HomeState extends State<_Home> {
         _handleIncomingJson(call.arguments as String);
       }
     });
-    _fileChannel.invokeMethod<String>('getInitialFile').then((json) {
-      if (json != null && json.isNotEmpty) _handleIncomingJson(json);
-    }).catchError((_) {});
+    _fileChannel
+        .invokeMethod<String>('getInitialFile')
+        .then((json) {
+          if (json != null && json.isNotEmpty) _handleIncomingJson(json);
+        })
+        .catchError((_) {});
   }
 
   Future<void> _load() async {
@@ -71,9 +74,9 @@ class _HomeState extends State<_Home> {
         if (selected != null) _promptImport(selected.course);
       });
     } on CourseFileException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Invalid course file: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Invalid course file: $e')));
     }
   }
 
@@ -111,9 +114,7 @@ class _HomeState extends State<_Home> {
   Widget build(BuildContext context) {
     final course = _course;
     if (course == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return AppShell(
       course: course,
