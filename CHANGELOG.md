@@ -22,6 +22,18 @@ bumped with `make ship-patch` / `ship-minor` / `ship-major`; see
 - Tests for the course library, the imported-course picker, the help tour, the
   position-source error classifiers, and the geo math — 62 → 114 tests.
 
+### Added
+- `test/toolchain_test.dart` — a fast sanity check over the build toolchain.
+  Every assertion in it corresponds to a breakage that actually reached `main`
+  through an auto-opened dependency PR: an AGP or Gradle major beyond what
+  Flutter supports, the `jvmTarget` DSL Kotlin 2.4 removed, an action pinned to
+  a mutable tag, and the `secrets`-in-step-`if:` gate. It runs in the fast test
+  job, so a bad bump fails in seconds with an explanation instead of an opaque
+  Gradle error part-way through a 20-minute Android build.
+- The Android CI job runs `:app:signingReport` before the APK build, so a bad
+  toolchain combination fails at configuration time and the log states whether
+  the release variant resolved to real or debug signing.
+
 ### Fixed
 - Android builds work again. The merged Dependabot bump to Android Gradle
   Plugin 9.3.0 requires Gradle 9.5+, drops the `kotlin-android` plugin, and

@@ -59,11 +59,22 @@ updates:
     commit-message:
       prefix: "deps(android)"
     ignore:
-      # AGP 9 requires Gradle 9.5+ and drops the `kotlin-android` plugin, and
-      # Flutter 3.41.1's own Gradle plugin throws an NPE under it. Revisit when
-      # the pinned Flutter version supports AGP 9; until then a major bump here
-      # only produces a red build.
+      # The Android toolchain majors are pinned to what Flutter 3.41.1 actually
+      # supports. Both of these were merged once and left main unable to build:
+      #
+      #   AGP 9.x    - drops the `kotlin-android` plugin, requires Gradle 9.5+,
+      #                and makes Flutter's own Gradle plugin throw an NPE while
+      #                applying.
+      #   Gradle 9.x - AGP 8.11.1 cannot create its problem-reporter service on
+      #                it, so the build fails during configuration.
+      #
+      # Revisit both together when the pinned Flutter version supports AGP 9;
+      # until then a major bump here only produces a red build.
       - dependency-name: "com.android.application"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "gradle-wrapper"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "gradle"
         update-types: ["version-update:semver-major"]
     groups:
       gradle:
