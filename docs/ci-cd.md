@@ -39,8 +39,12 @@ Three things now hold the line:
    DSL, SHA-pinning of every third-party action, and the absence of a
    `secrets`-gated step-level `if:`. Each failure says what breaks and what to
    do about it.
-3. The Android job runs `:app:signingReport` before the APK build, so an
-   incompatible combination fails at configuration instead of minutes in.
+3. The `build-android` job builds a real release APK on every push and PR, so
+   anything the unit test cannot see still fails before it reaches a release.
+
+(There is deliberately no standalone `./gradlew` step: Flutter's own
+`android/.gitignore` excludes the wrapper scripts, so they do not exist in a
+fresh clone.)
 
 To migrate deliberately: bump Flutter first, then AGP and Gradle together, then
 relax the expectations in `test/toolchain_test.dart` and the ignore rules in
@@ -91,9 +95,10 @@ job holds the `pages: write` and `id-token: write` scopes.
 
 Triggers: git tags beginning with `v`.
 
-Outputs the Android APK and App Bundle, a Web tarball, an unsigned iOS app
-bundle zip, and `SHA256SUMS.txt`, published to GitHub Releases with generated
-notes. Only the final `publish` job has `contents: write`.
+Outputs the per-ABI APKs (~16–20MB each), the universal APK, the Android App
+Bundle, a Web tarball, an unsigned iOS app bundle zip, and `SHA256SUMS.txt`,
+published to GitHub Releases with generated notes. Only the final `publish` job
+has `contents: write`.
 
 Android signing activates when `ANDROID_KEYSTORE_BASE64` is set; the run's job
 summary states whether the artifacts came out signed or unsigned. The check
@@ -101,23 +106,39 @@ lives in a job-level `env:` because the `secrets` context is **not** available
 to step-level `if:` conditions — a gate written as
 `if: ${{ secrets.FOO != '' }}` silently evaluates false and the step never runs.
 
-### 4) Dependency Review — `.github/workflows/dependency-review.yml`
+### 4) Package APK — `.github/workflows/package_apk.yml`
+
+Manual (`workflow_dispatch`) builder for install-ready Android APKs, for when
+you want a build in a tester's hands without cutting a release.
+
+Builds one APK per ABI (~16–20MB each) plus, optionally, the universal APK
+(~50MB), names them with version + build counter + commit, and uploads them as
+30-day artifacts with a summary table of sizes and target devices. The
+`publish` input additionally attaches them to a rolling `latest-build`
+prerelease, giving testers one stable URL that always holds the newest build.
+
+Signing behaves exactly as in the release workflow, and the run summary states
+whether the output was signed or debug-signed.
+
+Full walkthrough in [docs/release.md](release.md).
+
+### 5) Dependency Review — `.github/workflows/dependency-review.yml`
 
 Fails a PR that introduces a dependency with a high-or-worse known
 vulnerability, or one under a denied licence.
 
-### 5) Dependabot Auto-merge — `.github/workflows/dependabot-auto-merge.yml`
+### 6) Dependabot Auto-merge — `.github/workflows/dependabot-auto-merge.yml`
 
 Enables auto-merge on Dependabot patch and minor PRs so they land once CI is
 green. Major bumps wait for a human. Auto-merge only takes effect if branch
 protection requires status checks — without it, the PR merges immediately.
 
-### 6) Labeler — `.github/workflows/labeler.yml`
+### 7) Labeler — `.github/workflows/labeler.yml`
 
 Applies path-based labels from `.github/labeler.yml`. The `ios` label it adds
 is what opts a PR into the iOS build job.
 
-### 7) Stale — `.github/workflows/stale.yml`
+### 8) Stale — `.github/workflows/stale.yml`
 
 Weekly sweep marking issues and PRs stale after 60 quiet days and closing them
 14 days later. `pinned`, `security`, and `roadmap` are exempt.

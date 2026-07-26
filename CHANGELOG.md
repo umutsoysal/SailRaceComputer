@@ -23,6 +23,13 @@ bumped with `make ship-patch` / `ship-minor` / `ship-major`; see
   position-source error classifiers, and the geo math — 62 → 114 tests.
 
 ### Added
+- **Package APK workflow** (`.github/workflows/package_apk.yml`) — an on-demand
+  builder for install-ready Android APKs, so a build can reach a tester without
+  cutting a release. It splits per ABI, which takes the download from ~50MB to
+  ~18MB, names the files with version + build counter + commit, ships
+  `SHA256SUMS.txt`, and writes a summary table of sizes and target devices. An
+  opt-in `publish` input attaches them to a rolling `latest-build` prerelease so
+  testers have one stable URL. Tagged releases now include the per-ABI APKs too.
 - `test/toolchain_test.dart` — a fast sanity check over the build toolchain.
   Every assertion in it corresponds to a breakage that actually reached `main`
   through an auto-opened dependency PR: an AGP or Gradle major beyond what

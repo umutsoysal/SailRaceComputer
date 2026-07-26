@@ -2,6 +2,61 @@
 
 This repository can package release-ready artifacts for Android, iOS, and Web both locally and in GitHub Actions.
 
+## Getting an installable APK
+
+There are two paths, depending on whether you are cutting a real release.
+
+### On demand — the "Package APK" workflow
+
+For a build you can hand to a tester today, without touching the version or
+creating a tag: **Actions → Package APK → Run workflow**.
+
+| Input | Default | Effect |
+|-------|---------|--------|
+| `universal` | on | Also build the ~50MB APK that runs on any device |
+| `publish` | off | Also attach the APKs to the rolling `latest-build` prerelease |
+
+Every run uploads the APKs as workflow artifacts (kept 30 days) and writes a
+summary table listing each file, its size, and which devices it targets. With
+`publish` ticked, the same files are attached to a `latest-build` prerelease —
+one moving tag, so testers can bookmark a single download page. It is marked
+prerelease so it never looks like a real version.
+
+The workflow builds one APK per ABI:
+
+| File | Size | Install on |
+|------|------|------------|
+| `…-arm64-v8a.apk` | ~18MB | Nearly every phone from ~2017 onward — **start here** |
+| `…-armeabi-v7a.apk` | ~16MB | Older 32-bit ARM devices |
+| `…-x86_64.apk` | ~20MB | Emulators and x86 Chromebooks |
+| `…-universal.apk` | ~50MB | Anything, at ~3x the download |
+
+Filenames carry the version, the Android build counter, and the commit:
+`race-mate-1.0.1-b6-a1b2c3d-arm64-v8a.apk`. `SHA256SUMS.txt` ships alongside.
+
+Signing follows the same rule as the release workflow: with
+`ANDROID_KEYSTORE_BASE64` configured the APKs are signed with the upload
+keystore, and without it they are debug-signed. The run summary always states
+which happened. A debug-signed APK installs fine for testing but cannot update
+a Play Store install.
+
+To install one, download it on the phone and open it — Android will ask for
+permission to install from that browser or file manager the first time.
+
+### Tagged releases
+
+Pushing a `v*` tag runs `release.yml`, which publishes the per-ABI APKs, the
+universal APK, the App Bundle, the Web tarball, an unsigned iOS bundle, and
+`SHA256SUMS.txt` to a GitHub Release. See "Versioning policy" below for how to
+produce the tag.
+
+### Locally
+
+```bash
+make build-apk                                    # universal APK
+./tool/flutterw.sh build apk --release --split-per-abi
+```
+
 ## Versioning policy
 
 Race Mate now uses one public release version plus hidden platform build counters.

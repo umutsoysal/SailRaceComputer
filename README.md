@@ -344,8 +344,12 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md) for workflow and quality expectati
   with an explanation, instead of an opaque Gradle error mid-build
 - **Automatic PR labelling** from changed paths
 - **GitHub Pages** web deployment on every push to `main`
-- **Tagged release workflow** publishing signed Android, unsigned iOS, and Web
-  artifacts with SHA-256 checksums
+- **Tagged release workflow** publishing signed Android (per-ABI + universal
+  APK, App Bundle), unsigned iOS, and Web artifacts with SHA-256 checksums
+- **On-demand APK builds** — *Actions → Package APK* produces install-ready
+  per-ABI APKs (~18MB) without cutting a release, optionally attached to a
+  rolling `latest-build` prerelease for testers
+  ([docs/release.md](docs/release.md))
 - Issue templates, PR template, CODEOWNERS, Security Policy, Code of Conduct
 
 CI/CD setup details are documented in [docs/ci-cd.md](docs/ci-cd.md), packaging
