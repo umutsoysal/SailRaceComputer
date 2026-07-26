@@ -84,23 +84,8 @@ updates:
           - "minor"
           - "patch"
 
-  - package-ecosystem: "bundler"
-    directory: "/ios"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:00"
-      timezone: "America/Chicago"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "ios"
-    commit-message:
-      prefix: "deps(ios)"
-    groups:
-      bundler:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
+  # No `bundler` entry for /ios: there is no Gemfile there, so every run failed
+  # with "No files found in /ios". iOS dependencies come from CocoaPods
+  # (ios/Podfile), which Dependabot does not support — Pods are refreshed by
+  # `pod update` during an iOS release. Re-add bundler here only if a Gemfile
+  # is introduced, e.g. for fastlane.

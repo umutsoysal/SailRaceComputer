@@ -17,6 +17,39 @@ action and the prerequisites table in the README in the same PR — the ensuing
 All third-party actions are pinned to commit SHAs with the tag in a trailing
 comment. Dependabot's `github-actions` ecosystem updates both.
 
+## The Android toolchain is a matrix, not four independent knobs
+
+Flutter, the Android Gradle Plugin, Gradle, and Kotlin have to move together.
+Dependabot does not know that, and twice it opened major bumps that were merged
+and left `main` unable to build an APK:
+
+- **AGP 9** removes the `kotlin-android` plugin, requires Gradle 9.5+, and makes
+  Flutter 3.41.1's own Gradle plugin throw an NPE while applying.
+- **Gradle 9** breaks AGP 8.11.1, which cannot create its problem-reporter
+  service during configuration.
+- **Kotlin 2.4** removed the string-valued `android.kotlinOptions.jvmTarget`,
+  which is a script compilation error until you move to `compilerOptions`.
+
+Three things now hold the line:
+
+1. `.github/dependabot.yml` ignores major bumps for `com.android.application`,
+   `gradle`, and `gradle-wrapper`.
+2. `test/toolchain_test.dart` asserts the matrix in the *fast* test job — AGP
+   major, Gradle major, Kotlin major, the absence of the removed `jvmTarget`
+   DSL, SHA-pinning of every third-party action, and the absence of a
+   `secrets`-gated step-level `if:`. Each failure says what breaks and what to
+   do about it.
+3. The Android job runs `:app:signingReport` before the APK build, so an
+   incompatible combination fails at configuration instead of minutes in.
+
+To migrate deliberately: bump Flutter first, then AGP and Gradle together, then
+relax the expectations in `test/toolchain_test.dart` and the ignore rules in
+`.github/dependabot.yml` in the same change.
+
+Note there is no `bundler` entry for `/ios` — there is no Gemfile, so it failed
+on every run with "No files found in /ios". iOS dependencies come from
+CocoaPods, which Dependabot does not support.
+
 ## Workflows
 
 ### 1) CI — `.github/workflows/ci.yml`

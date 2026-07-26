@@ -287,8 +287,10 @@ VMG is positive when the boat is closing on the mark and negative when opening.
 | `flutter_launcher_icons` | ^0.14.4 | App icon generation (dev) |
 | `flutter_lints` | ^6.0.0 | Static analysis (dev) |
 
-Dependabot opens grouped weekly update PRs for pub, Gradle, Bundler, and
-GitHub Actions; patch and minor bumps auto-merge once CI is green.
+Dependabot opens grouped weekly update PRs for pub, Gradle, and GitHub Actions;
+patch and minor bumps auto-merge once CI is green. Android toolchain majors
+(AGP, Gradle) are held back to what Flutter 3.41.1 supports — see
+`.github/dependabot.yml` and `test/toolchain_test.dart`.
 
 ---
 
@@ -335,8 +337,11 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md) for workflow and quality expectati
 - **Actions pinned to commit SHAs**, kept current by Dependabot
 - **Dependency review** blocks PRs that pull in a known-vulnerable or
   incompatibly-licensed package
-- **Dependabot** for pub, Gradle, Bundler, and GitHub Actions, with grouped PRs
-  and auto-merge for patch/minor once CI is green
+- **Dependabot** for pub, Gradle, and GitHub Actions, with grouped PRs and
+  auto-merge for patch/minor once CI is green
+- **Toolchain guard** (`test/toolchain_test.dart`) fails a dependency bump that
+  would move AGP, Gradle, or Kotlin outside what Flutter supports — in seconds,
+  with an explanation, instead of an opaque Gradle error mid-build
 - **Automatic PR labelling** from changed paths
 - **GitHub Pages** web deployment on every push to `main`
 - **Tagged release workflow** publishing signed Android, unsigned iOS, and Web
