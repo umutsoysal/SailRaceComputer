@@ -2,82 +2,136 @@
 
 This repository uses GitHub Actions for continuous integration and delivery.
 
+## Shared toolchain setup
+
+Every workflow installs Flutter through the composite action at
+`.github/actions/setup-flutter`, which pins the SDK version (currently
+**3.41.1**), restores the pub cache, and runs `flutter pub get`.
+
+Pinning matters: `channel: stable` floats, so a new Flutter release can change
+the formatter or the lint set and turn CI red with no change to this repo. To
+move to a new Flutter version, bump the `flutter-version` default in that
+action and the prerequisites table in the README in the same PR — the ensuing
+`dart format` churn then lands as a deliberate change.
+
+All third-party actions are pinned to commit SHAs with the tag in a trailing
+comment. Dependabot's `github-actions` ecosystem updates both.
+
 ## Workflows
 
-## 1) CI
+### 1) CI — `.github/workflows/ci.yml`
 
-- File: `.github/workflows/ci.yml`
-- Triggers: push to `main`, pull requests, manual dispatch
-- Checks:
-  - `flutter pub get`
-  - `dart run tool/version.dart check`
-  - `dart format --set-exit-if-changed`
-  - `flutter analyze`
-  - `flutter test --coverage`
-  - `flutter build web --release`
-  - `flutter build apk --release`
-  - `flutter build appbundle --release`
-- Artifact:
-  - `coverage/lcov.info` uploaded as `coverage-lcov`
+Triggers: pull requests, push to `main`, manual dispatch.
 
-## 2) Deploy Web
+| Job | Runner | What it does |
+|-----|--------|--------------|
+| `analyze-and-test` | ubuntu | Version metadata check, `dart format --set-exit-if-changed`, `flutter analyze`, `flutter test --coverage`, coverage floor, uploads `coverage-lcov` |
+| `lint-workflows` | ubuntu | actionlint over `.github/workflows` |
+| `build-web` | ubuntu | `flutter build web --release` |
+| `build-android` | ubuntu | Release APK and App Bundle |
+| `build-ios` | macOS | Unsigned iOS release build |
 
-- File: `.github/workflows/deploy_web.yml`
-- Triggers: push to `main`, manual dispatch
-- Build command:
-  - `flutter build web --release --base-href "/<repo-name>/"`
-- Deploy target:
-  - GitHub Pages via `actions/deploy-pages`
+`build-ios` is skipped on pull requests unless the PR carries the `ios` label
+(applied automatically when `ios/**` changes), because macOS runner minutes
+bill at 10× the Linux rate. It always runs on `main` and via manual dispatch.
 
-## 3) Release Packaging
+#### Coverage floor
 
-- File: `.github/workflows/release.yml`
-- Triggers: git tags beginning with `v`
-- Outputs:
-  - Android APK
-  - Android App Bundle
-  - Web tarball
-  - Unsigned iOS app bundle zip
-  - `SHA256SUMS.txt`
-- Publish target:
-  - GitHub Releases with generated release notes
+`tool/check_coverage.dart` parses `coverage/lcov.info`, prints per-file line
+coverage worst-first, writes a one-line verdict to the job summary, and exits
+non-zero below the floor declared at the top of that file. Generated files
+(`lib/firebase_options.dart`) and dev-only entrypoints (`lib/dev/`) are
+excluded. Raise the floor as coverage improves; never lower it to turn a build
+green.
+
+Run it locally with `make coverage-check`.
+
+### 2) Deploy Web — `.github/workflows/deploy_web.yml`
+
+Triggers: push to `main`, manual dispatch.
+
+Builds with `--base-href "/<repo-name>/"`, copies `index.html` to `404.html` so
+deep links survive a refresh, and deploys to GitHub Pages. Only the `deploy`
+job holds the `pages: write` and `id-token: write` scopes.
+
+### 3) Release Packaging — `.github/workflows/release.yml`
+
+Triggers: git tags beginning with `v`.
+
+Outputs the Android APK and App Bundle, a Web tarball, an unsigned iOS app
+bundle zip, and `SHA256SUMS.txt`, published to GitHub Releases with generated
+notes. Only the final `publish` job has `contents: write`.
+
+Android signing activates when `ANDROID_KEYSTORE_BASE64` is set; the run's job
+summary states whether the artifacts came out signed or unsigned. The check
+lives in a job-level `env:` because the `secrets` context is **not** available
+to step-level `if:` conditions — a gate written as
+`if: ${{ secrets.FOO != '' }}` silently evaluates false and the step never runs.
+
+### 4) Dependency Review — `.github/workflows/dependency-review.yml`
+
+Fails a PR that introduces a dependency with a high-or-worse known
+vulnerability, or one under a denied licence.
+
+### 5) Dependabot Auto-merge — `.github/workflows/dependabot-auto-merge.yml`
+
+Enables auto-merge on Dependabot patch and minor PRs so they land once CI is
+green. Major bumps wait for a human. Auto-merge only takes effect if branch
+protection requires status checks — without it, the PR merges immediately.
+
+### 6) Labeler — `.github/workflows/labeler.yml`
+
+Applies path-based labels from `.github/labeler.yml`. The `ios` label it adds
+is what opts a PR into the iOS build job.
+
+### 7) Stale — `.github/workflows/stale.yml`
+
+Weekly sweep marking issues and PRs stale after 60 quiet days and closing them
+14 days later. `pinned`, `security`, and `roadmap` are exempt.
 
 ## Required repository settings
 
-1. In GitHub repository settings, enable GitHub Pages with source set to GitHub Actions.
-2. Protect `main` branch:
-   - Require pull request before merging.
-   - Require status checks to pass (`CI / analyze-and-test`).
-3. Keep dependency update PRs enabled via Dependabot.
+1. Settings → Pages → Source: **GitHub Actions**.
+2. Protect `main`:
+   - Require a pull request before merging.
+   - Require status checks: `CI / Analyze & test`, `CI / Build web`,
+     `CI / Build Android`, `CI / Lint workflows`,
+     `Dependency Review / Review dependency changes`.
+   - Require branches to be up to date before merging.
+   - Optional: require review from code owners.
+3. Settings → General → Pull Requests: **Allow auto-merge** (required by the
+   Dependabot auto-merge workflow).
+4. Create the labels used by `.github/labeler.yml`: `android`, `ios`, `web`,
+   `courses`, `tests`, `documentation`, `ci`, `dependencies`. Labeler creates
+   missing ones on first run, but pre-creating them gives you the colours.
 
-## Recommended branch protection checks
+## Release secrets
 
-- `CI / analyze-and-test`
-- Require up-to-date branches before merge
-- Optional: require review from code owners
-
-## Dependency automation
-
-Dependabot configuration is in `.github/dependabot.yml` and updates:
-
-- Dart/Flutter dependencies (`pub`)
-- GitHub Actions
-- Android Gradle dependencies
-- iOS bundler dependencies
+| Secret | Purpose |
+|--------|---------|
+| `ANDROID_KEYSTORE_BASE64` | Base64 of the upload keystore; absent means unsigned Android artifacts |
+| `ANDROID_KEYSTORE_PASSWORD` | Keystore password |
+| `ANDROID_KEY_ALIAS` | Signing key alias |
+| `ANDROID_KEY_PASSWORD` | Signing key password |
 
 ## Local parity
 
-Use `make ci` for the same core validation loop developers see in GitHub Actions.
+`make ci` runs the same core loop: format check, analysis, tests with the
+coverage floor, and the Web/Android release builds. `make build-ios-no-codesign`
+covers the iOS job on macOS.
 
 Packaging commands are documented in [docs/release.md](release.md).
 
 ## Troubleshooting
 
-- CI fails on formatting:
-  - Run `dart format lib test` and commit changes.
-- CI fails on analysis:
-  - Run `flutter analyze` locally and resolve warnings/errors.
-- Web deploy path issues:
-  - Verify repository name and check the base href in the deploy workflow.
-- Release workflow fails version verification:
-  - Ensure the pushed tag matches the exact release tag from `make version-tag`.
+- **Formatting fails** — run `dart format lib test tool` and commit. If the diff
+  is large and you did not touch those files, the pinned Flutter version was
+  probably just bumped; land the reformat as its own commit.
+- **Analysis fails** — run `flutter analyze` locally.
+- **Coverage floor fails** — run `make coverage-check`; the worst-covered files
+  are listed first.
+- **Web deploy path issues** — verify the repository name against the base href.
+- **Release version verification fails** — the pushed tag must match
+  `make version-tag` exactly.
+- **Dependabot PRs do not merge** — check that auto-merge is enabled in repo
+  settings and that branch protection requires status checks.

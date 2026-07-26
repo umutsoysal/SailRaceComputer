@@ -1,8 +1,9 @@
 FLUTTER ?= ./tool/flutterw.sh
 DART ?= ./tool/dartw.sh
 BASE_HREF ?= /
+SIMULATOR ?= iPhone 15 Pro Max
 
-.PHONY: help bootstrap format analyze test coverage ci build-web build-apk build-appbundle build-ios-no-codesign build-all clean version version-tag version-check version-sync version-android version-ios version-patch version-minor version-major version-release-patch version-release-minor version-release-major ship ship-patch ship-minor ship-major ship-android ship-ios
+.PHONY: help bootstrap format analyze test coverage coverage-check screenshots ci build-web build-apk build-appbundle build-ios-no-codesign build-all clean version version-tag version-check version-sync version-android version-ios version-patch version-minor version-major version-release-patch version-release-minor version-release-major ship ship-patch ship-minor ship-major ship-android ship-ios
 
 help:
 	@printf '%s\n' \
@@ -11,6 +12,8 @@ help:
 		'analyze                Run flutter analyze' \
 		'test                   Run flutter test' \
 		'coverage               Run flutter test --coverage' \
+		'coverage-check         Run coverage and enforce the line-coverage floor' \
+		'screenshots            Run the screenshot harness on a booted iOS simulator' \
 		'ci                     Run the local CI validation suite' \
 		'build-web              Build the web app (override BASE_HREF=/repo/)' \
 		'build-apk              Build a release APK' \
@@ -52,7 +55,15 @@ test: bootstrap
 coverage: bootstrap
 	$(FLUTTER) test --coverage
 
-ci: bootstrap format analyze test build-web build-apk build-appbundle
+coverage-check: coverage
+	$(DART) tool/check_coverage.dart
+
+# Boots the screenshot harness against the simulated boat so the README and
+# store screenshots can be retaken. See docs/screenshots.md.
+screenshots: bootstrap
+	$(FLUTTER) run -t lib/dev/screenshot_main.dart -d "$(SIMULATOR)"
+
+ci: bootstrap format analyze coverage-check build-web build-apk build-appbundle
 
 version:
 	$(DART) tool/version.dart current

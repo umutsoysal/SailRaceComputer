@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/ci.yml/badge.svg)](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/ci.yml)
 [![Deploy Web](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/deploy_web.yml/badge.svg)](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/deploy_web.yml)
+[![Flutter](https://img.shields.io/badge/Flutter-3.41.1-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
+[![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20Web-lightgrey)](#platform-notes)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 A GPS-powered sailing race companion app for iOS, Android, and Web. Race Mate tracks your boat's position against a pre-defined race course and displays the real-time navigation metrics you need during a regatta.
@@ -41,7 +43,13 @@ A GPS-powered sailing race companion app for iOS, Android, and Web. Race Mate tr
 
 ## Screenshots
 
-> _(Add screenshots here)_
+| Courses | Map | Race |
+|:---:|:---:|:---:|
+| <img src="screenshots/courses.png" alt="Course library with bundled Chicago courses" width="240"> | <img src="screenshots/map.png" alt="Top-down course map with live boat position" width="240"> | <img src="screenshots/race.png" alt="Live race screen showing VMG, distance, bearing, SOG and COG" width="240"> |
+| Pick a course from the bundled library or build your own | Offline top-down plot of the course with your boat and heading | Live metrics with the race clock running and auto-advance armed |
+
+Captured from a real build driven by the boat simulator — see
+[docs/screenshots.md](docs/screenshots.md) to retake them.
 
 ---
 
@@ -49,12 +57,15 @@ A GPS-powered sailing race companion app for iOS, Android, and Web. Race Mate tr
 
 ### Prerequisites
 
-| Tool | Minimum version |
-|------|----------------|
-| Flutter | 3.x (stable) |
-| Dart SDK | 3.11.0 |
+| Tool | Version |
+|------|---------|
+| Flutter | 3.41.1 (stable) — pinned in [`.github/actions/setup-flutter`](.github/actions/setup-flutter/action.yml) |
+| Dart SDK | ^3.11.0 (ships with Flutter) |
 | Xcode | 15+ (iOS builds) |
 | Android Studio | Flamingo+ (Android builds) |
+
+`./tool/flutterw.sh` and `./tool/dartw.sh` locate the SDK for you, or set
+`FLUTTER_BIN=/path/to/flutter`.
 
 ### Install dependencies
 
@@ -90,11 +101,28 @@ For development and testing without a physical device or GPS signal, use the bui
 
 The simulator opens a top-down course map with controls for heading, speed, and position. It feeds simulated positions into the same `PositionSource` abstraction used by the production app.
 
+To drive the *real* app UI against the simulated boat — which is how the
+screenshots above are made — use the screenshot harness instead:
+
+```bash
+./tool/flutterw.sh run -t lib/dev/screenshot_main.dart -d chrome
+```
+
 ### Run tests
+
+```bash
+make test
+```
+
+Or the full local equivalent of CI — format check, analysis, tests with the
+coverage floor enforced, and the release builds:
 
 ```bash
 make ci
 ```
+
+`make coverage-check` prints per-file line coverage worst-first and fails if the
+total drops below the floor in [`tool/check_coverage.dart`](tool/check_coverage.dart).
 
 ### Generate app icons
 
@@ -116,43 +144,59 @@ make build-ios-no-codesign   # macOS only
 
 ```
 lib/
-├── main.dart               # Production entry point
-├── app_shell.dart          # Tab shell (Course + Race screens)
+├── main.dart                # Production entry point
+├── app_shell.dart           # Five-tab shell (Courses, Map, Race, Recordings, Settings)
 ├── models/
-│   ├── course.dart         # Course & Buoy data models
-│   └── lat_lng.dart        # LatLng with JSON serialisation
+│   └── course.dart          # Course & Buoy data models
 ├── screens/
-│   ├── course_screen.dart  # Course builder & library UI
-│   └── race_screen.dart    # Live navigation display
+│   ├── course_screen.dart   # Course builder & library UI
+│   ├── map_screen.dart      # Top-down course map with live position
+│   ├── race_screen.dart     # Live navigation display & track recording
+│   ├── library_screen.dart  # Saved courses and past recordings
+│   ├── settings_screen.dart # Preferences, feedback, legal
+│   └── legal_document_screen.dart
 ├── services/
-│   ├── course_file.dart    # .srcourse.json encode / decode
-│   ├── course_library.dart # Bundled + saved course discovery
-│   ├── course_store.dart   # SharedPreferences persistence
-│   ├── position_source.dart# GPS abstraction interface
-│   └── watch_service.dart  # Watch companion MethodChannel
+│   ├── app_analytics.dart      # Firebase Analytics wrapper (no-op until configured)
+│   ├── course_file.dart        # .srcourse.json encode / decode / validation
+│   ├── course_library.dart     # Bundled + saved course discovery
+│   ├── course_store.dart       # SharedPreferences persistence
+│   ├── location_service.dart   # Fix lifecycle, errors, and recovery
+│   ├── position_source.dart    # GPS abstraction interface
+│   ├── race_computations.dart  # Race clock, course metrics, mark advance
+│   ├── race_session_store.dart # Recorded sessions + GPX export
+│   └── watch_service.dart      # Watch companion MethodChannel
 ├── utils/
-│   └── geo.dart            # Haversine distance, bearing, VMG, ETA
-└── dev/                    # Development-only (not shipped)
-    ├── sim_main.dart        # Simulator entry point
-    ├── boat_simulator.dart  # Headless 5 Hz boat physics
-    ├── simulator_screen.dart# Top-down map + controls
+│   └── geo.dart             # Haversine distance, bearing, VMG, ETA
+├── widgets/
+│   ├── course_map_painter.dart          # Offline canvas chart
+│   ├── help_tour.dart                   # First-launch spotlight tour
+│   ├── recording_map_preview.dart
+│   └── imported_course_picker_dialog.dart
+└── dev/                     # Development-only (not shipped)
+    ├── sim_main.dart              # Simulator entry point
+    ├── screenshot_main.dart       # Screenshot harness entry point
+    ├── boat_simulator.dart        # Headless 5 Hz boat physics
+    ├── simulator_screen.dart      # Top-down map + controls
     ├── simulated_position_source.dart
-    └── course_map_painter.dart  # Custom canvas painter
+    └── course_map_painter.dart
 
 assets/
 ├── branding/
 │   ├── icon.png             # 1024×1024 app icon source
 │   └── icon_foreground.png  # Android adaptive icon foreground
-└── courses/
-    ├── demo_chicago.srcourse.json
-    └── chicago_south_circle_s3.json
+└── courses/                 # Auto-discovered; drop in a JSON file to add one
+    ├── beercan_south.json
+    ├── ccyc_courses.json
+    ├── morf_courses.json
+    └── template.json
 
-test/
-├── course_file_test.dart    # Encode/decode, validation, slugification
-└── geo_test.dart            # Distance, bearing, VMG, compass tests
+test/                        # 114 tests, 75%+ line coverage enforced in CI
 
 tool/
-└── make_icon.py             # Generates source icon PNGs with Pillow
+├── check_coverage.dart          # Coverage summary + floor enforcement
+├── make_icon.py                 # Generates source icon PNGs with Pillow
+├── version.dart                 # Version metadata & build args
+└── verify_release_version.dart  # Guards that a tag matches app_version.json
 ```
 
 ---
@@ -230,15 +274,21 @@ VMG is positive when the boat is closing on the mark and negative when opening.
 
 ## Dependencies
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `geolocator` | 14.0.2 | GPS on iOS, Android, Web |
-| `shared_preferences` | 2.5.5 | On-device course & library storage |
-| `file_selector` | 1.0.3 | Cross-platform file picker for import |
-| `share_plus` | 13.1.0 | Native share sheet for export |
-| `cupertino_icons` | 1.0.8 | iOS icon library |
-| `flutter_launcher_icons` | 0.14.4 | App icon generation (dev) |
-| `flutter_lints` | 6.0.0 | Static analysis (dev) |
+| Package | Constraint | Purpose |
+|---------|-----------|---------|
+| `geolocator` | ^14.0.2 | GPS on iOS, Android, Web |
+| `shared_preferences` | ^2.5.5 | On-device course & library storage |
+| `file_selector` | ^1.0.3 | Cross-platform file picker for import |
+| `share_plus` | ^13.1.0 | Native share sheet for export |
+| `url_launcher` | ^6.3.0 | Feedback and notice-board links |
+| `firebase_core` | ^4.11.0 | Firebase bootstrap (inert until configured) |
+| `firebase_analytics` | ^12.4.3 | Usage analytics (inert until configured) |
+| `cupertino_icons` | ^1.0.8 | iOS icon library |
+| `flutter_launcher_icons` | ^0.14.4 | App icon generation (dev) |
+| `flutter_lints` | ^6.0.0 | Static analysis (dev) |
+
+Dependabot opens grouped weekly update PRs for pub, Gradle, Bundler, and
+GitHub Actions; patch and minor bumps auto-merge once CI is green.
 
 ---
 
@@ -260,10 +310,15 @@ VMG is positive when the boat is closing on the mark and negative when opening.
 
 ## Bundled Courses
 
+Every `assets/courses/*.json` file is discovered automatically at runtime — add
+a file and it shows up in the library, no code change required.
+
 | File | Description |
 |------|-------------|
-| `demo_chicago.srcourse.json` | Four-mark demo course off Chicago (Lake Michigan) |
-| `chicago_south_circle_s3.json` | Real South-Side Circle course used by Chicago racing fleets (SA7 start/finish, Marks 3/2/8) |
+| `beercan_south.json` | Columbia YC Wednesday Night Beer Can Series — 9 buoys, 16 course layouts |
+| `ccyc_courses.json` | CCYC Race Courses — 9 buoys, 32 course layouts |
+| `morf_courses.json` | MORF Courses — 9 buoys, 16 course layouts |
+| `template.json` | Annotated starting point for building your own course file |
 
 ---
 
@@ -272,15 +327,26 @@ VMG is positive when the boat is closing on the mark and negative when opening.
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for workflow and quality expectations.
 
 ### Repository quality features
-- GitHub Actions CI for formatting, analysis, tests, coverage, and release-build verification
-- GitHub Pages web deployment workflow
-- Tagged release workflow that publishes Android, iOS, and Web artifacts to GitHub Releases
-- Dependabot for pub, Gradle, Bundler, and GitHub Actions updates
-- Issue templates for bug reports and feature requests
-- Pull request template with validation checklist
-- CODEOWNERS, Security Policy, and Code of Conduct
+- **CI on every PR** — formatting, static analysis, 114 tests, an enforced
+  line-coverage floor, workflow linting, and Web/Android release builds
+- **iOS build** on `main`, on demand, and on PRs labelled `ios`
+- **Pinned toolchain** — one composite action installs the same Flutter version
+  everywhere, so a new Flutter stable can never break CI unannounced
+- **Actions pinned to commit SHAs**, kept current by Dependabot
+- **Dependency review** blocks PRs that pull in a known-vulnerable or
+  incompatibly-licensed package
+- **Dependabot** for pub, Gradle, Bundler, and GitHub Actions, with grouped PRs
+  and auto-merge for patch/minor once CI is green
+- **Automatic PR labelling** from changed paths
+- **GitHub Pages** web deployment on every push to `main`
+- **Tagged release workflow** publishing signed Android, unsigned iOS, and Web
+  artifacts with SHA-256 checksums
+- Issue templates, PR template, CODEOWNERS, Security Policy, Code of Conduct
 
-CI/CD setup details are documented in [docs/ci-cd.md](docs/ci-cd.md), and packaging details are in [docs/release.md](docs/release.md).
+CI/CD setup details are documented in [docs/ci-cd.md](docs/ci-cd.md), packaging
+details in [docs/release.md](docs/release.md), and the screenshot workflow in
+[docs/screenshots.md](docs/screenshots.md). Release history lives in
+[CHANGELOG.md](CHANGELOG.md).
 
 ---
 
