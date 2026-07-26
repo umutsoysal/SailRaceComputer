@@ -42,11 +42,7 @@ class CourseFile {
 
   /// Serialize a [Course] to the canonical JSON string (pretty-printed,
   /// 2-space indent — diff-friendly for sharing via git/email).
-  static String encode(
-    Course course, {
-    String? notes,
-    DateTime? createdAt,
-  }) {
+  static String encode(Course course, {String? notes, DateTime? createdAt}) {
     final catalog = _buildCatalog(course.buoys);
     final map = <String, dynamic>{
       'format': formatId,
@@ -54,10 +50,7 @@ class CourseFile {
       'name': course.name,
       'createdAt': (createdAt ?? DateTime.now().toUtc()).toIso8601String(),
       if (notes != null && notes.isNotEmpty) 'notes': notes,
-      'units': {
-        'distance': 'nm',
-        'roundingRadius': 'm',
-      },
+      'units': {'distance': 'nm', 'roundingRadius': 'm'},
       'buoys': catalog.buoys,
       'courses': [
         {
@@ -85,12 +78,14 @@ class CourseFile {
     final format = raw['format'];
     if (format != formatId) {
       throw CourseFileException(
-          'Unexpected "format": $format (want "$formatId").');
+        'Unexpected "format": $format (want "$formatId").',
+      );
     }
     final version = raw['version'];
     if (version is! int || version < 1 || version > currentVersion) {
       throw CourseFileException(
-          'Unsupported "version": $version (this build understands 1..$currentVersion).');
+        'Unsupported "version": $version (this build understands 1..$currentVersion).',
+      );
     }
     final name = raw['name'];
     if (name is! String || name.trim().isEmpty) {
@@ -104,7 +99,8 @@ class CourseFile {
         return _decodeV2(raw, name.trim(), versionValue);
       default:
         throw CourseFileException(
-            'Unsupported "version": $version (this build understands 1..$currentVersion).');
+          'Unsupported "version": $version (this build understands 1..$currentVersion).',
+        );
     }
   }
 
@@ -139,7 +135,7 @@ class CourseFile {
         .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
         .replaceAll(RegExp(r'^-+|-+$'), '');
     final base = slug.isEmpty ? 'course' : slug;
-    return '$base.$fileExtension';
+    return '$base.$fileExtension.json';
   }
 
   static ImportedCourseBundle _decodeV1(
@@ -202,7 +198,8 @@ class CourseFile {
     }
     if (coursesRaw.isEmpty) {
       throw const CourseFileException(
-          '"courses" must contain at least one course.');
+        '"courses" must contain at least one course.',
+      );
     }
 
     final usedIds = <String>{};
@@ -295,15 +292,18 @@ class CourseFile {
     }
     if (lat is! num || lat < -90 || lat > 90) {
       throw CourseFileException(
-          'Buoy "${bn.trim()}" has invalid "lat": $lat (expected -90..90).');
+        'Buoy "${bn.trim()}" has invalid "lat": $lat (expected -90..90).',
+      );
     }
     if (lng is! num || lng < -180 || lng > 180) {
       throw CourseFileException(
-          'Buoy "${bn.trim()}" has invalid "lng": $lng (expected -180..180).');
+        'Buoy "${bn.trim()}" has invalid "lng": $lng (expected -180..180).',
+      );
     }
     if (r is! num || r <= 0) {
       throw CourseFileException(
-          'Buoy "${bn.trim()}" has invalid "roundingRadiusM": $r (must be > 0).');
+        'Buoy "${bn.trim()}" has invalid "roundingRadiusM": $r (must be > 0).',
+      );
     }
     return Buoy(
       name: bn.trim(),
@@ -526,10 +526,10 @@ class ImportedCourseDefinition {
   String? get summary {
     final parts = <String>[
       id,
-      if (type != null) type!,
+      ?type,
       if (distanceNm != null)
         '${distanceNm!.toStringAsFixed(distanceNm! % 1 == 0 ? 0 : 2)} NM',
-      if (fleet != null) fleet!,
+      ?fleet,
     ];
     if (parts.isEmpty) return null;
     return parts.join(' · ');
@@ -537,10 +537,7 @@ class ImportedCourseDefinition {
 }
 
 class _EncodedCatalog {
-  const _EncodedCatalog({
-    required this.buoys,
-    required this.route,
-  });
+  const _EncodedCatalog({required this.buoys, required this.route});
 
   final List<Map<String, dynamic>> buoys;
   final List<String> route;
