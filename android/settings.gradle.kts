@@ -22,7 +22,7 @@ plugins {
     // Held at 8.x: AGP 9 drops the `kotlin-android` plugin and makes Flutter
     // 3.41.1's own Gradle plugin throw an NPE while applying. Dependabot is
     // configured to skip major bumps here until the pinned Flutter supports it.
-    id("com.android.application") version "8.11.1" apply false
+    id("com.android.application") version "8.13.2" apply false
     // START: FlutterFire Configuration
     id("com.google.gms.google-services") version("4.4.4") apply false
     // END: FlutterFire Configuration
