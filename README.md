@@ -1,12 +1,33 @@
 # Race Mate — Sailing Race Computer
 
 [![CI](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/ci.yml/badge.svg)](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/ci.yml)
-[![Deploy Web](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/deploy_web.yml/badge.svg)](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/deploy_web.yml)
+[![Package APK](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/package_apk.yml/badge.svg)](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/package_apk.yml)
+[![Download APK](https://img.shields.io/github/v/release/umutsoysal/SailRaceComputer?include_prereleases&label=download%20APK&color=3DDC84&logo=android&logoColor=white)](https://github.com/umutsoysal/SailRaceComputer/releases/latest)
 [![Flutter](https://img.shields.io/badge/Flutter-3.41.1-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
-[![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20Web-lightgrey)](#platform-notes)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 A GPS-powered sailing race companion app for iOS, Android, and Web. Race Mate tracks your boat's position against a pre-defined race course and displays the real-time navigation metrics you need during a regatta.
+
+---
+
+## Download
+
+Android builds are published to
+[**Releases**](https://github.com/umutsoysal/SailRaceComputer/releases).
+
+Grab **`…-arm64-v8a.apk`** unless you know your device needs something else — it
+covers essentially every phone from 2017 onward and is ~18MB. Open the file on
+the phone and allow installation when Android asks.
+
+| File | Size | Install on |
+|------|------|------------|
+| `…-arm64-v8a.apk` | ~18MB | Nearly every modern phone — **start here** |
+| `…-armeabi-v7a.apk` | ~16MB | Older 32-bit ARM devices |
+| `…-x86_64.apk` | ~20MB | Emulators and x86 Chromebooks |
+| `…-universal.apk` | ~50MB | Anything, at ~3x the download |
+
+`SHA256SUMS.txt` accompanies every release. Maintainers can cut a fresh build
+from **Actions → Package APK**; see [docs/release.md](docs/release.md).
 
 ---
 
@@ -343,7 +364,8 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md) for workflow and quality expectati
   would move AGP, Gradle, or Kotlin outside what Flutter supports — in seconds,
   with an explanation, instead of an opaque Gradle error mid-build
 - **Automatic PR labelling** from changed paths
-- **GitHub Pages** web deployment on every push to `main`
+- **No web deployment** — Android is the shipping artifact; the web CI job is
+  kept purely as a compile check for the `-d chrome` development flow
 - **Tagged release workflow** publishing signed Android (per-ABI + universal
   APK, App Bundle), unsigned iOS, and Web artifacts with SHA-256 checksums
 - **On-demand APK builds** — *Actions → Package APK* produces install-ready

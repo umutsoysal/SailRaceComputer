@@ -100,6 +100,14 @@ jobs:
           echo "stem=${stem}" >> "$GITHUB_OUTPUT"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
+          # Surfaced in the release notes so nobody installs a debug-signed
+          # build without knowing.
+          if [ "${HAS_KEYSTORE}" = "true" ]; then
+            echo "signing=Signed with the upload keystore." >> "$GITHUB_OUTPUT"
+          else
+            echo "signing=**Debug-signed** — for testing only. Android may warn on install, and this build cannot update a Play Store install." >> "$GITHUB_OUTPUT"
+          fi
+
           out=build/app/outputs/flutter-apk
           for abi in arm64-v8a armeabi-v7a x86_64; do
             [ -f "${out}/app-${abi}-release.apk" ] || continue
@@ -165,12 +173,23 @@ jobs:
           name: Latest development build
           prerelease: true
           body: |
-            Automated build of `${{ github.sha }}` from `${{ github.ref_name }}`.
+            Race Mate ${{ steps.collect.outputs.version }} — automated build of
+            `${{ github.sha }}` from `${{ github.ref_name }}`.
 
-            Not a release — this tag moves with every published build. For a
-            stable version, use the tagged releases.
+            ### Which file do I want?
 
-            Install `${{ steps.collect.outputs.stem }}-arm64-v8a.apk` unless you
-            know your device needs another ABI. `SHA256SUMS.txt` lists checksums
-            for everything attached here.
+            | File | Size | Install on |
+            | --- | --- | --- |
+            | `${{ steps.collect.outputs.stem }}-arm64-v8a.apk` | ~18MB | Nearly every phone from ~2017 onward — **start here** |
+            | `${{ steps.collect.outputs.stem }}-armeabi-v7a.apk` | ~16MB | Older 32-bit ARM devices |
+            | `${{ steps.collect.outputs.stem }}-x86_64.apk` | ~20MB | Emulators and x86 Chromebooks |
+            | `${{ steps.collect.outputs.stem }}-universal.apk` | ~50MB | Anything, at ~3x the download |
+
+            Open the file on your phone and allow installation when Android
+            asks. `SHA256SUMS.txt` lists checksums for everything here.
+
+            ${{ steps.collect.outputs.signing }}
+
+            > This tag moves with every published build, so it is marked as a
+            > pre-release. For a fixed version, use a tagged release.
           files: apks/*

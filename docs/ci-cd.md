@@ -54,6 +54,11 @@ Note there is no `bundler` entry for `/ios` — there is no Gemfile, so it faile
 on every run with "No files found in /ios". iOS dependencies come from
 CocoaPods, which Dependabot does not support.
 
+There is deliberately no web-deployment workflow. Android builds are the
+shipping artifact and they are published to Releases; the `build-web` CI job
+stays only as a compile check, so the `-d chrome` development flow and the
+screenshot harness cannot silently rot.
+
 ## Workflows
 
 ### 1) CI — `.github/workflows/ci.yml`
@@ -83,15 +88,7 @@ green.
 
 Run it locally with `make coverage-check`.
 
-### 2) Deploy Web — `.github/workflows/deploy_web.yml`
-
-Triggers: push to `main`, manual dispatch.
-
-Builds with `--base-href "/<repo-name>/"`, copies `index.html` to `404.html` so
-deep links survive a refresh, and deploys to GitHub Pages. Only the `deploy`
-job holds the `pages: write` and `id-token: write` scopes.
-
-### 3) Release Packaging — `.github/workflows/release.yml`
+### 2) Release Packaging — `.github/workflows/release.yml`
 
 Triggers: git tags beginning with `v`.
 
@@ -106,7 +103,7 @@ lives in a job-level `env:` because the `secrets` context is **not** available
 to step-level `if:` conditions — a gate written as
 `if: ${{ secrets.FOO != '' }}` silently evaluates false and the step never runs.
 
-### 4) Package APK — `.github/workflows/package_apk.yml`
+### 3) Package APK — `.github/workflows/package_apk.yml`
 
 Manual (`workflow_dispatch`) builder for install-ready Android APKs, for when
 you want a build in a tester's hands without cutting a release.
@@ -122,40 +119,39 @@ whether the output was signed or debug-signed.
 
 Full walkthrough in [docs/release.md](release.md).
 
-### 5) Dependency Review — `.github/workflows/dependency-review.yml`
+### 4) Dependency Review — `.github/workflows/dependency-review.yml`
 
 Fails a PR that introduces a dependency with a high-or-worse known
 vulnerability, or one under a denied licence.
 
-### 6) Dependabot Auto-merge — `.github/workflows/dependabot-auto-merge.yml`
+### 5) Dependabot Auto-merge — `.github/workflows/dependabot-auto-merge.yml`
 
 Enables auto-merge on Dependabot patch and minor PRs so they land once CI is
 green. Major bumps wait for a human. Auto-merge only takes effect if branch
 protection requires status checks — without it, the PR merges immediately.
 
-### 7) Labeler — `.github/workflows/labeler.yml`
+### 6) Labeler — `.github/workflows/labeler.yml`
 
 Applies path-based labels from `.github/labeler.yml`. The `ios` label it adds
 is what opts a PR into the iOS build job.
 
-### 8) Stale — `.github/workflows/stale.yml`
+### 7) Stale — `.github/workflows/stale.yml`
 
 Weekly sweep marking issues and PRs stale after 60 quiet days and closing them
 14 days later. `pinned`, `security`, and `roadmap` are exempt.
 
 ## Required repository settings
 
-1. Settings → Pages → Source: **GitHub Actions**.
-2. Protect `main`:
+1. Protect `main`:
    - Require a pull request before merging.
    - Require status checks: `CI / Analyze & test`, `CI / Build web`,
      `CI / Build Android`, `CI / Lint workflows`,
      `Dependency Review / Review dependency changes`.
    - Require branches to be up to date before merging.
    - Optional: require review from code owners.
-3. Settings → General → Pull Requests: **Allow auto-merge** (required by the
+2. Settings → General → Pull Requests: **Allow auto-merge** (required by the
    Dependabot auto-merge workflow).
-4. Create the labels used by `.github/labeler.yml`: `android`, `ios`, `web`,
+3. Create the labels used by `.github/labeler.yml`: `android`, `ios`, `web`,
    `courses`, `tests`, `documentation`, `ci`, `dependencies`. Labeler creates
    missing ones on first run, but pre-creating them gives you the colours.
 
