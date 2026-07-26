@@ -1,10 +1,12 @@
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
     id("com.google.gms.google-services")
     // END: FlutterFire Configuration
+    id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -41,7 +43,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-
     defaultConfig {
         applicationId = "com.sailrace.sail_race_computer"
         minSdk = flutter.minSdkVersion
@@ -69,6 +70,15 @@ android {
                 signingConfigs.getByName("debug")
             }
         }
+    }
+}
+
+// Kotlin 2.4 removed the string-valued `android.kotlinOptions.jvmTarget`; the
+// compilerOptions DSL is the replacement. Keep this in step with the Java
+// sourceCompatibility/targetCompatibility above.
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
     }
 }
 

@@ -49,3 +49,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Gradle build outputs (android/build/ is not covered by the root /build/ rule)
+/android/build/
+/android/.gradle/
+/android/app/build/

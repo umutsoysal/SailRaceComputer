@@ -23,6 +23,14 @@ bumped with `make ship-patch` / `ship-minor` / `ship-major`; see
   position-source error classifiers, and the geo math — 62 → 114 tests.
 
 ### Fixed
+- Android builds work again. The merged Dependabot bump to Android Gradle
+  Plugin 9.3.0 requires Gradle 9.5+, drops the `kotlin-android` plugin, and
+  makes Flutter 3.41.1's own Gradle plugin throw an NPE — `main` could not
+  produce an APK. AGP is back on 8.11.1 and Dependabot now ignores major bumps
+  for it until the pinned Flutter version supports AGP 9.
+- Kotlin 2.4.10 removed the string-valued `android.kotlinOptions.jvmTarget`,
+  which failed script compilation. Migrated to the `compilerOptions` DSL; the
+  Kotlin bump itself is kept.
 - Exported course files are named `<name>.srcourse.json` again. They were being
   written as `<name>.srcourse`, contradicting the documented format and the
   extension the importer expects.
