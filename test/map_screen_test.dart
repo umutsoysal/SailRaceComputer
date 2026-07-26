@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:sail_race_computer/models/course.dart';
 import 'package:sail_race_computer/screens/map_screen.dart';
+import 'package:sail_race_computer/services/map_tiles.dart';
 import 'package:sail_race_computer/services/position_source.dart';
 import 'package:sail_race_computer/utils/geo.dart';
 
@@ -112,7 +115,24 @@ class _RecoveryOnlyPositionSource implements PositionSource {
   Future<void> dispose() => _controller.close();
 }
 
+/// A tile source that never has a tile, so the screen behaves as it does with
+/// no network — without any test reaching for one.
+class _EmptyTileSource extends ChangeNotifier implements TileImageSource {
+  final requested = <TileCoord>[];
+
+  @override
+  TileSource get source => TileSource.cartoLight;
+
+  @override
+  ui.Image? imageFor(TileCoord coord) => null;
+
+  @override
+  void request(Iterable<TileCoord> coords) => requested.addAll(coords);
+}
+
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
+
   testWidgets('shows the course name in the map app bar', (tester) async {
     final course = Course(
       name: 'Wednesday Series',
@@ -293,6 +313,68 @@ void main() {
     await tester.pump();
 
     expect(find.text('Waiting for GPS'), findsNothing);
+  });
+
+  testWidgets('draws the basemap and credits it by default', (tester) async {
+    final tiles = _EmptyTileSource();
+    final course = Course(
+      name: 'Wednesday Series',
+      buoys: [
+        Buoy(name: 'Start', position: const LatLng(41.88, -87.62)),
+        Buoy(name: 'Finish', position: const LatLng(41.89, -87.61)),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapScreen(
+          course: course,
+          positionSource: _ErrorPositionSource('temporary'),
+          tileSource: tiles,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tiles.requested, isNotEmpty);
+    expect(find.text(TileSource.cartoLight.attribution), findsOneWidget);
+  });
+
+  testWidgets('turning the basemap off stops tile fetches and persists', (
+    tester,
+  ) async {
+    final tiles = _EmptyTileSource();
+    final course = Course(
+      name: 'Wednesday Series',
+      buoys: [Buoy(name: 'Start', position: const LatLng(41.88, -87.62))],
+    );
+
+    Widget screen() => MaterialApp(
+      home: MapScreen(
+        course: course,
+        positionSource: _ErrorPositionSource('temporary'),
+        tileSource: tiles,
+      ),
+    );
+
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('map-basemap-toggle')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(TileSource.cartoLight.attribution), findsNothing);
+
+    tiles.requested.clear();
+    await tester.pump();
+    expect(tiles.requested, isEmpty);
+
+    // Reopening the screen keeps the choice.
+    await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    expect(find.text(TileSource.cartoLight.attribution), findsNothing);
   });
 
   testWidgets('uses a recovery gps sample after startup timeout', (

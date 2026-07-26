@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/course.dart';
+import '../services/basemap_store.dart';
 import '../services/location_service.dart';
+import '../services/map_tiles.dart';
 import '../services/position_source.dart';
 import '../utils/geo.dart';
 import '../widgets/course_map_painter.dart';
@@ -10,7 +13,12 @@ import '../widgets/course_map_painter.dart';
 /// Displays the racecourse as a top-down map with the boat's live GPS
 /// position overlaid when available.
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key, required this.course, this.positionSource});
+  const MapScreen({
+    super.key,
+    required this.course,
+    this.positionSource,
+    this.tileSource,
+  });
 
   final Course course;
 
@@ -19,6 +27,10 @@ class MapScreen extends StatefulWidget {
   /// the screen creates its own [GeolocatorPositionSource].
   final PositionSource? positionSource;
 
+  /// Optional override for the basemap tiles. Null means the screen owns a
+  /// [MapTileLoader] of its own; an injected source is not disposed here.
+  final TileImageSource? tileSource;
+
   @override
   State<MapScreen> createState() => _MapScreenState();
 }
@@ -26,13 +38,42 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   late final LocationService _locationService;
   final _mapTransformController = TransformationController();
+  final _basemapStore = BasemapStore();
+
+  MapTileLoader? _ownedTiles;
+  bool _basemapEnabled = true;
+
+  TileImageSource? get _tiles => widget.tileSource ?? _ownedTiles;
 
   @override
   void initState() {
     super.initState();
     _locationService = LocationService(positionSource: widget.positionSource);
     _locationService.addListener(_handleLocationChanged);
+    _mapTransformController.addListener(_handleTransformChanged);
     unawaited(_locationService.start());
+    unawaited(_loadBasemapPreference());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.tileSource != null || _ownedTiles != null) return;
+    // Retina tiles are only worth the bytes on a dense screen.
+    _ownedTiles = MapTileLoader(
+      retina: MediaQuery.devicePixelRatioOf(context) >= 2,
+    );
+  }
+
+  Future<void> _loadBasemapPreference() async {
+    final enabled = await _basemapStore.load();
+    if (!mounted || enabled == _basemapEnabled) return;
+    setState(() => _basemapEnabled = enabled);
+  }
+
+  void _toggleBasemap() {
+    setState(() => _basemapEnabled = !_basemapEnabled);
+    unawaited(_basemapStore.save(enabled: _basemapEnabled));
   }
 
   void _handleLocationChanged() {
@@ -40,11 +81,20 @@ class _MapScreenState extends State<MapScreen> {
     setState(() {});
   }
 
+  /// Panning and zooming change which tiles are on screen, so the basemap has
+  /// to be recomputed as the view moves.
+  void _handleTransformChanged() {
+    if (!mounted || _tiles == null || !_basemapEnabled) return;
+    setState(() {});
+  }
+
   @override
   void dispose() {
     _locationService.removeListener(_handleLocationChanged);
     _locationService.dispose();
+    _mapTransformController.removeListener(_handleTransformChanged);
     _mapTransformController.dispose();
+    _ownedTiles?.dispose();
     super.dispose();
   }
 
@@ -72,6 +122,18 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            key: const Key('map-basemap-toggle'),
+            tooltip: _basemapEnabled
+                ? 'Hide map background'
+                : 'Show map background',
+            onPressed: _toggleBasemap,
+            icon: Icon(
+              _basemapEnabled ? Icons.layers : Icons.layers_clear_outlined,
+            ),
+          ),
+        ],
       ),
       body: widget.course.buoys.isEmpty
           ? const Center(child: Text('Add buoys on the Course tab first.'))
@@ -90,7 +152,10 @@ class _MapScreenState extends State<MapScreen> {
             builder: (context, constraints) => InteractiveViewer(
               transformationController: _mapTransformController,
               boundaryMargin: const EdgeInsets.all(360),
-              minScale: 0.75,
+              // Pulling well back is how you find the shoreline relative to a
+              // course laid out in open water — but only the basemap keeps
+              // drawing out there, so the plain chart stays tied to its plot.
+              minScale: _basemapEnabled ? 0.25 : 0.75,
               maxScale: 8,
               child: SizedBox(
                 width: constraints.maxWidth,
@@ -102,12 +167,15 @@ class _MapScreenState extends State<MapScreen> {
                     heading: fix?.heading ?? 0,
                     speedMs: fix?.speed ?? 0,
                     paddingPx: 120,
+                    basemap: _basemapFor(constraints),
                   ),
                 ),
               ),
             ),
           ),
         ),
+        if (_basemapEnabled && _tiles != null)
+          Positioned(left: 12, bottom: 12, child: _attributionChip(_tiles!)),
         if (boat == null)
           Positioned(
             top: 12,
@@ -136,6 +204,47 @@ class _MapScreenState extends State<MapScreen> {
 
   void _resetMapView() {
     _mapTransformController.value = Matrix4.identity();
+  }
+
+  /// Describes the visible slice of the canvas so the painter only fetches the
+  /// tiles the sailor can actually see at the current pan and zoom.
+  Basemap? _basemapFor(BoxConstraints constraints) {
+    final tiles = _tiles;
+    if (!_basemapEnabled || tiles == null) return null;
+    final canvas = Offset.zero & constraints.biggest;
+    return Basemap(
+      tiles: tiles,
+      viewScale: _mapTransformController.value.getMaxScaleOnAxis(),
+      viewport: MatrixUtils.inverseTransformRect(
+        _mapTransformController.value,
+        canvas,
+      ),
+    );
+  }
+
+  Widget _attributionChip(TileImageSource tiles) {
+    final source = tiles.source;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.82),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: InkWell(
+        onTap: () => unawaited(
+          launchUrl(
+            Uri.parse(source.attributionUrl),
+            mode: LaunchMode.externalApplication,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          child: Text(
+            source.attribution,
+            style: const TextStyle(fontSize: 10, color: Colors.black87),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _gpsChip() {
