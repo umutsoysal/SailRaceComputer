@@ -29,7 +29,7 @@ A GPS-powered sailing race companion app for iOS, Android, and Web. Race Mate tr
 - Persist the active course across app restarts
 
 ### Course Library
-- Browse bundled courses (Chicago demo, South-Side Circle S3)
+- Browse bundled Chicago courses (Columbia YC beer can, CCYC, MORF)
 - Save any course to a personal library stored on-device
 - Import courses from a JSON file (file picker)
 - Import by pasting JSON from the clipboard
@@ -276,13 +276,13 @@ VMG is positive when the boat is closing on the mark and negative when opening.
 
 | Package | Constraint | Purpose |
 |---------|-----------|---------|
-| `geolocator` | ^14.0.2 | GPS on iOS, Android, Web |
+| `geolocator` | ^14.0.3 | GPS on iOS, Android, Web |
 | `shared_preferences` | ^2.5.5 | On-device course & library storage |
 | `file_selector` | ^1.0.3 | Cross-platform file picker for import |
-| `share_plus` | ^13.1.0 | Native share sheet for export |
+| `share_plus` | ^13.2.1 | Native share sheet for export |
 | `url_launcher` | ^6.3.0 | Feedback and notice-board links |
 | `firebase_core` | ^4.11.0 | Firebase bootstrap (inert until configured) |
-| `firebase_analytics` | ^12.4.3 | Usage analytics (inert until configured) |
+| `firebase_analytics` | ^12.4.5 | Usage analytics (inert until configured) |
 | `cupertino_icons` | ^1.0.8 | iOS icon library |
 | `flutter_launcher_icons` | ^0.14.4 | App icon generation (dev) |
 | `flutter_lints` | ^6.0.0 | Static analysis (dev) |
