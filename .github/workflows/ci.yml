@@ -58,15 +58,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # `local` reporter writes straight to the job log. github-check would
-      # need `checks: write`, which forked pull requests cannot be granted.
+      # actionlint is run directly rather than through the reviewdog wrapper:
+      # the wrapper's github-check reporter needs `checks: write` (which forked
+      # pull requests cannot be granted) and its local reporter needs a diff
+      # command it has no way to get on a push. Running the binary needs
+      # neither, and pinning the version plus its published checksum keeps the
+      # download honest. The runner image already provides shellcheck, which
+      # actionlint picks up to lint `run:` blocks.
       - name: Run actionlint
-        uses: reviewdog/action-actionlint@50842263c20a7c46bd0065b9e624d3c569db061e # v1
-        with:
-          reporter: local
-          level: error
-          fail_level: error
-          fail_on_error: true
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o "$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum --check --strict
+          tar -xzf "$archive" actionlint
+          ./actionlint -color
 
   build-web:
     name: Build web
