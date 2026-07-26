@@ -146,10 +146,10 @@ class _RaceScreenState extends State<RaceScreen> {
 
   Duration get _startOffset => Duration(minutes: _startOffsetMinutes);
   RaceClockDisplay get _raceClock => buildRaceClockDisplay(
-        startedAt: _raceStartedAt,
-        elapsed: _raceClockElapsed,
-        startOffset: _startOffset,
-      );
+    startedAt: _raceStartedAt,
+    elapsed: _raceClockElapsed,
+    startOffset: _startOffset,
+  );
   CourseMetrics get _selectedCourseMetrics =>
       buildCourseMetrics(_selectedCourse);
 
@@ -313,8 +313,9 @@ class _RaceScreenState extends State<RaceScreen> {
     final durationLabel = duration.inMinutes > 0
         ? '${duration.inMinutes}m ${duration.inSeconds % 60}s'
         : '${duration.inSeconds}s';
-    final pointLabel =
-        pointCount == 1 ? '1 GPS point' : '$pointCount GPS points';
+    final pointLabel = pointCount == 1
+        ? '1 GPS point'
+        : '$pointCount GPS points';
 
     final shouldFinish = await showDialog<bool>(
       context: context,
@@ -416,10 +417,12 @@ class _RaceScreenState extends State<RaceScreen> {
   }) {
     final minutes = duration.inMinutes;
     final seconds = duration.inSeconds % 60;
-    final durationText =
-        minutes > 0 ? '${minutes}m ${seconds}s' : '${seconds}s';
-    final summary =
-        pointCount == 1 ? 'Saved 1 GPS point' : 'Saved $pointCount GPS points';
+    final durationText = minutes > 0
+        ? '${minutes}m ${seconds}s'
+        : '${seconds}s';
+    final summary = pointCount == 1
+        ? 'Saved 1 GPS point'
+        : 'Saved $pointCount GPS points';
     if (completedCourse) {
       return 'Race finished. $summary over $durationText. GPX added to library.';
     }
@@ -462,8 +465,10 @@ class _RaceScreenState extends State<RaceScreen> {
       return Scaffold(
         appBar: AppBar(title: const Text('Race')),
         body: const Center(
-            child: Text(
-                'Add buoys to create the course on the Course tab or choose one of the existing courses.')),
+          child: Text(
+            'Add buoys to create the course on the Course tab or choose one of the existing courses.',
+          ),
+        ),
       );
     }
 
@@ -492,9 +497,9 @@ class _RaceScreenState extends State<RaceScreen> {
                     clock.caption,
                     key: const Key('race-app-bar-timer-caption'),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          letterSpacing: 1.1,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      letterSpacing: 1.1,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -600,8 +605,11 @@ class _RaceScreenState extends State<RaceScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.gps_not_fixed,
-                  color: colors.onSurfaceVariant, size: 16),
+              Icon(
+                Icons.gps_not_fixed,
+                color: colors.onSurfaceVariant,
+                size: 16,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Acquiring GPS...',
@@ -712,7 +720,7 @@ class _RaceScreenState extends State<RaceScreen> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _raceViewLabels.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           return ChoiceChip(
             label: Text(_raceViewLabels[index]),
@@ -762,7 +770,7 @@ class _RaceScreenState extends State<RaceScreen> {
             Text(
               _raceState == _RaceState.finished
                   ? (_finishMessage ??
-                      'Your race has been saved to the library.')
+                        'Your race has been saved to the library.')
                   : 'Pick a course, check the layout, and start tracking when you are lined up.',
             ),
             const SizedBox(height: 16),
@@ -825,10 +833,7 @@ class _RaceScreenState extends State<RaceScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            Text(
-              'Start timer',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
+            Text('Start timer', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -938,10 +943,7 @@ class _RaceScreenState extends State<RaceScreen> {
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           minimumSize: const Size(0, 44),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-          ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
     );
@@ -1080,8 +1082,7 @@ class _RaceScreenState extends State<RaceScreen> {
     required int? etaSeconds,
   }) {
     final screenSize = MediaQuery.sizeOf(context);
-    final compactLandscape =
-        screenSize.width < 760 || screenSize.height < 420;
+    final compactLandscape = screenSize.width < 760 || screenSize.height < 420;
     if (compactLandscape) {
       return _buildCompactLandscapeBody(
         key: key,
@@ -1129,17 +1130,17 @@ class _RaceScreenState extends State<RaceScreen> {
                 child: _raceState == _RaceState.stopped
                     ? const SizedBox.shrink()
                     : _raceState == _RaceState.finished
-                        ? const SizedBox.shrink()
-                        : _displayError != null
-                            ? _errorCard(_displayError!)
-                            : fix == null
-                                ? const _Waiting()
-                                : _bigMetric(
-                                    label: 'VMG to mark',
-                                    value: msToKnots(vmg).toStringAsFixed(2),
-                                    unit: 'kn',
-                                    good: vmg > 0,
-                                  ),
+                    ? const SizedBox.shrink()
+                    : _displayError != null
+                    ? _errorCard(_displayError!)
+                    : fix == null
+                    ? const _Waiting()
+                    : _bigMetric(
+                        label: 'VMG to mark',
+                        value: msToKnots(vmg).toStringAsFixed(2),
+                        unit: 'kn',
+                        good: vmg > 0,
+                      ),
               ),
             ),
           ),
@@ -1149,7 +1150,8 @@ class _RaceScreenState extends State<RaceScreen> {
             flex: 4,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(6, 12, 12, 12),
-              child: (_raceState == _RaceState.stopped ||
+              child:
+                  (_raceState == _RaceState.stopped ||
                       _raceState == _RaceState.finished ||
                       _displayError != null ||
                       fix == null)
@@ -1531,16 +1533,15 @@ class _RaceScreenState extends State<RaceScreen> {
               alignment: Alignment.centerLeft,
               child: Text(
                 value,
-                style:
-                    const TextStyle(fontSize: 40, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 40,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             if (direction.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(
-                direction,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              Text(direction, style: Theme.of(context).textTheme.titleMedium),
             ],
           ],
         ),
@@ -1608,22 +1609,15 @@ class _RaceScreenState extends State<RaceScreen> {
         bearing == null ? '--' : '${bearing.toStringAsFixed(0)}°',
         bearing == null ? '' : compass(bearing),
       ),
-      _metric(
-        'SOG',
-        msToKnots(sog).toStringAsFixed(2),
-        'kn',
-      ),
-      _metric(
-        'COG',
-        '${cog.toStringAsFixed(0)}°',
-        compass(cog),
-      ),
+      _metric('SOG', msToKnots(sog).toStringAsFixed(2), 'kn'),
+      _metric('COG', '${cog.toStringAsFixed(0)}°', compass(cog)),
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final effectiveSpacing =
-            constraints.maxWidth < compactThreshold ? spacing * 0.75 : spacing;
+        final effectiveSpacing = constraints.maxWidth < compactThreshold
+            ? spacing * 0.75
+            : spacing;
         final distanceBearingRow = Row(
           children: [
             Expanded(child: tiles[0]),

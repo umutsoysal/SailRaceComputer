@@ -172,13 +172,8 @@ class RaceSessionEntry {
 
   String get subtitle {
     final started = record.startedAt.toLocal();
-    final date =
-        _two(started.month) +
-        '/' +
-        _two(started.day) +
-        '/' +
-        started.year.toString();
-    final time = _two(started.hour) + ':' + _two(started.minute);
+    final date = '${_two(started.month)}/${_two(started.day)}/${started.year}';
+    final time = '${_two(started.hour)}:${_two(started.minute)}';
     final duration = record.duration;
     final durationText = duration.inHours > 0
         ? '${duration.inHours}h ${duration.inMinutes.remainder(60)}m'
@@ -305,13 +300,8 @@ class RaceSessionStore {
   String _suggestedFileName(RaceSessionRecord record) {
     final started = record.startedAt.toUtc();
     final datePart =
-        started.year.toString() +
-        _two(started.month) +
-        _two(started.day) +
-        '-' +
-        _two(started.hour) +
-        _two(started.minute) +
-        _two(started.second);
+        '${started.year}${_two(started.month)}${_two(started.day)}'
+        '-${_two(started.hour)}${_two(started.minute)}${_two(started.second)}';
     return '${_slugify(record.courseName)}-$datePart.gpx';
   }
 }

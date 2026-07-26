@@ -13,8 +13,9 @@ double chooseScaleBarNm({
   }
 
   final targetNm = targetWidthPx / pixelsPerNm;
-  final magnitude =
-      math.pow(10, (math.log(targetNm) / math.ln10).floor()).toDouble();
+  final magnitude = math
+      .pow(10, (math.log(targetNm) / math.ln10).floor())
+      .toDouble();
   final base = magnitude > 0 ? magnitude : 0.01;
 
   for (final factor in const [1.0, 2.0, 5.0, 10.0]) {
@@ -32,6 +33,52 @@ String formatScaleBarNm(double nm) {
   if (nm >= 1) return '${nm.toStringAsFixed(1)} NM';
   if (nm >= 0.1) return '${nm.toStringAsFixed(1)} NM';
   return '${nm.toStringAsFixed(2)} NM';
+}
+
+/// One drawn buoy label: the canvas anchor plus the text to show there.
+class BuoyLabelGroup {
+  const BuoyLabelGroup({required this.at, required this.text});
+
+  final Offset at;
+  final String text;
+}
+
+/// Collapses buoys that project onto (near enough) the same canvas point into
+/// a single label, so a start/finish mark rounded twice renders as
+/// "1·5. SA7 Start/Finish" instead of two labels stacked on each other.
+///
+/// [toCanvas] projects a course position to canvas coordinates.
+List<BuoyLabelGroup> buoyLabelGroups(
+  Course course,
+  Offset Function(LatLng) toCanvas, {
+  double mergeRadiusPx = 6,
+}) {
+  final anchors = <Offset>[];
+  final ordinals = <List<int>>[];
+  final names = <String>[];
+
+  for (var i = 0; i < course.buoys.length; i++) {
+    final buoy = course.buoys[i];
+    final at = toCanvas(buoy.position);
+    final existing = anchors.indexWhere(
+      (a) => (a - at).distance <= mergeRadiusPx,
+    );
+    if (existing >= 0) {
+      ordinals[existing].add(i + 1);
+    } else {
+      anchors.add(at);
+      ordinals.add(<int>[i + 1]);
+      names.add(buoy.name);
+    }
+  }
+
+  return <BuoyLabelGroup>[
+    for (var i = 0; i < anchors.length; i++)
+      BuoyLabelGroup(
+        at: anchors[i],
+        text: '${ordinals[i].join('·')}. ${names[i]}',
+      ),
+  ];
 }
 
 /// Top-down equirectangular projection of a course and optionally a boat
@@ -66,7 +113,7 @@ class CourseMapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final points = <LatLng>[
       ...course.buoys.map((b) => b.position),
-      if (boat != null) boat!,
+      ?boat,
       ...track,
     ];
     _proj = _Projection.fit(
@@ -170,9 +217,73 @@ class CourseMapPainter extends CustomPainter {
           ..strokeWidth = 2
           ..style = PaintingStyle.stroke,
       );
-
-      _label(canvas, '${i + 1}. ${b.name}', c + const Offset(12, -14));
     }
+
+    // Labels go on last so a later marker cannot paint over an earlier label.
+    _drawBuoyLabels(canvas);
+  }
+
+  /// Labels every buoy, merging marks that share a position (a start/finish
+  /// buoy rounded twice reads "1·5. SA7 Start/Finish") and nudging or dropping
+  /// any label that would collide with one already drawn.
+  void _drawBuoyLabels(Canvas canvas) {
+    final placed = <Rect>[];
+    for (final group in buoyLabelGroups(course, _proj.toCanvas)) {
+      final tp = _labelPainter(group.text);
+      final anchor = _placeLabel(tp, group.at, placed);
+      if (anchor == null) continue;
+      placed.add(_labelRect(tp, anchor));
+      _paintLabel(canvas, tp, anchor);
+    }
+  }
+
+  /// Picks the first candidate position around [at] whose label rect stays on
+  /// canvas and clears [placed]. Returns null when every candidate collides,
+  /// which drops the label rather than rendering unreadable overlap.
+  Offset? _placeLabel(TextPainter tp, Offset at, List<Rect> placed) {
+    final candidates = <Offset>[
+      at + const Offset(12, -14),
+      at + Offset(-tp.width - 12, -14),
+      at + const Offset(12, 4),
+      at + Offset(-tp.width - 12, 4),
+      at + Offset(-tp.width / 2, -tp.height - 14),
+      at + Offset(-tp.width / 2, 14),
+    ];
+    for (final candidate in candidates) {
+      final rect = _labelRect(tp, candidate);
+      if (rect.left < 0 ||
+          rect.top < 0 ||
+          rect.right > _proj.size.width ||
+          rect.bottom > _proj.size.height) {
+        continue;
+      }
+      if (placed.any(rect.overlaps)) continue;
+      return candidate;
+    }
+    return null;
+  }
+
+  static Rect _labelRect(TextPainter tp, Offset at) =>
+      Rect.fromLTWH(at.dx - 3, at.dy - 1, tp.width + 6, tp.height + 2);
+
+  static TextPainter _labelPainter(String text) => TextPainter(
+    text: TextSpan(
+      text: text,
+      style: const TextStyle(
+        color: Colors.black87,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+  )..layout();
+
+  void _paintLabel(Canvas canvas, TextPainter tp, Offset at) {
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(_labelRect(tp, at), const Radius.circular(3)),
+      Paint()..color = Colors.white.withValues(alpha: 0.85),
+    );
+    tp.paint(canvas, at);
   }
 
   void _drawBoat(Canvas canvas) {
@@ -215,7 +326,11 @@ class CourseMapPainter extends CustomPainter {
   }
 
   void _drawArrowHead(
-      Canvas canvas, Offset tip, double headingDeg, Color color) {
+    Canvas canvas,
+    Offset tip,
+    double headingDeg,
+    Color color,
+  ) {
     final rad = (headingDeg - 90) * math.pi / 180.0;
     final left =
         tip + Offset(math.cos(rad + 2.6) * 10, math.sin(rad + 2.6) * 10);
@@ -229,23 +344,8 @@ class CourseMapPainter extends CustomPainter {
     canvas.drawPath(path, Paint()..color = color);
   }
 
-  void _label(Canvas canvas, String text, Offset at) {
-    final tp = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: const TextStyle(
-            color: Colors.black87, fontSize: 12, fontWeight: FontWeight.w600),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    final bg = Rect.fromLTWH(
-        at.dx - 3, at.dy - 1, tp.width + 6, tp.height + 2);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(bg, const Radius.circular(3)),
-      Paint()..color = Colors.white.withValues(alpha: 0.85),
-    );
-    tp.paint(canvas, at);
-  }
+  void _label(Canvas canvas, String text, Offset at) =>
+      _paintLabel(canvas, _labelPainter(text), at);
 
   void _drawScaleBar(Canvas canvas, Size size) {
     final targetWidthPx = math.min(120.0, size.width * 0.22);
@@ -271,7 +371,9 @@ class CourseMapPainter extends CustomPainter {
       double d = 0;
       while (d < m.length) {
         out.addPath(
-            m.extractPath(d, math.min(d + dash, m.length)), Offset.zero);
+          m.extractPath(d, math.min(d + dash, m.length)),
+          Offset.zero,
+        );
         d += dash + gap;
       }
     }
@@ -332,13 +434,16 @@ class _Projection {
     final centerLat = (minLat + maxLat) / 2;
     final centerLng = (minLng + maxLng) / 2;
     const metersPerDegLat = 111320.0;
-    final metersPerDegLng =
-        111320.0 * math.cos(centerLat * math.pi / 180.0);
+    final metersPerDegLng = 111320.0 * math.cos(centerLat * math.pi / 180.0);
 
-    var spanMetersX =
-        math.max((maxLng - minLng) * metersPerDegLng, minSpanMeters);
-    var spanMetersY =
-        math.max((maxLat - minLat) * metersPerDegLat, minSpanMeters);
+    var spanMetersX = math.max(
+      (maxLng - minLng) * metersPerDegLng,
+      minSpanMeters,
+    );
+    var spanMetersY = math.max(
+      (maxLat - minLat) * metersPerDegLat,
+      minSpanMeters,
+    );
     if (spanMetersX == 0) spanMetersX = minSpanMeters;
     if (spanMetersY == 0) spanMetersY = minSpanMeters;
 
