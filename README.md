@@ -55,6 +55,15 @@ from **Actions → Package APK**; see [docs/release.md](docs/release.md).
 - **Auto-advance** — automatically steps to the next mark when the boat enters the rounding radius
 - **GPS status** — live fix indicator with accuracy display and error recovery
 
+### Course Map
+- **Real-world basemap** — the course is plotted over OpenStreetMap tiles, so
+  the shoreline, harbour walls, and breakwaters show up behind the marks
+  instead of an empty grid
+- **Pinch, pan, and re-centre** — tiles follow the zoom, so the detail sharpens
+  as you zoom in
+- **Works offline** — no network, or the layers button toggled off, and the map
+  falls back to the plain chart background it has always drawn
+
 ### Course Management
 - Build a course from scratch by adding buoys (name, lat/lng, rounding radius)
 - Drag to reorder marks

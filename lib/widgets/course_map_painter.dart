@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../models/course.dart';
+import '../services/map_tiles.dart';
 import '../utils/geo.dart';
 
 double chooseScaleBarNm({
@@ -81,11 +83,51 @@ List<BuoyLabelGroup> buoyLabelGroups(
   ];
 }
 
+/// The real-world chart drawn behind a course: where the tiles come from and
+/// how much of the canvas is actually on screen.
+@immutable
+class Basemap {
+  const Basemap({
+    required this.tiles,
+    this.viewScale = 1,
+    this.viewport,
+    this.maxTiles = 64,
+  });
+
+  final TileImageSource tiles;
+
+  /// Zoom factor the canvas is displayed at (the `InteractiveViewer` scale).
+  /// Tiles are picked to match what the eye ends up seeing, not the untouched
+  /// canvas.
+  final double viewScale;
+
+  /// The part of the canvas currently visible, in canvas pixels. Null covers
+  /// the whole canvas.
+  final Rect? viewport;
+
+  /// Ceiling on tiles per frame. Hitting it drops a pyramid level rather than
+  /// firing off hundreds of requests.
+  final int maxTiles;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Basemap &&
+      identical(other.tiles, tiles) &&
+      other.viewScale == viewScale &&
+      other.viewport == viewport &&
+      other.maxTiles == maxTiles;
+
+  @override
+  int get hashCode => Object.hash(tiles, viewScale, viewport, maxTiles);
+}
+
 /// Top-down equirectangular projection of a course and optionally a boat
-/// position. Pure CustomPainter — no map tiles, works offline.
+/// position.
 ///
 /// [boat], [heading], [speedMs], and [track] are all optional; omit them to
-/// render a static course overview with no boat overlay.
+/// render a static course overview with no boat overlay. Pass [basemap] to
+/// draw real-world map tiles underneath; without it — or with no network —
+/// the plain offline chart background is used instead.
 class CourseMapPainter extends CustomPainter {
   CourseMapPainter({
     required this.course,
@@ -96,7 +138,8 @@ class CourseMapPainter extends CustomPainter {
     this.currentMarkIndex = 0,
     this.paddingPx = 48,
     this.minSpanMeters = 200,
-  });
+    this.basemap,
+  }) : super(repaint: basemap?.tiles);
 
   final Course course;
   final LatLng? boat;
@@ -106,8 +149,9 @@ class CourseMapPainter extends CustomPainter {
   final int currentMarkIndex;
   final double paddingPx;
   final double minSpanMeters;
+  final Basemap? basemap;
 
-  late _Projection _proj;
+  late CourseProjection _proj;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -116,7 +160,7 @@ class CourseMapPainter extends CustomPainter {
       ?boat,
       ...track,
     ];
-    _proj = _Projection.fit(
+    _proj = CourseProjection.fit(
       points: points,
       size: size,
       paddingPx: paddingPx,
@@ -124,7 +168,8 @@ class CourseMapPainter extends CustomPainter {
     );
 
     _drawBackground(canvas, size);
-    _drawGrid(canvas, size);
+    final drewTiles = _drawBasemap(canvas, size);
+    if (!drewTiles) _drawGrid(canvas, size);
     _drawCourseLines(canvas);
     _drawTrack(canvas);
     _drawBuoys(canvas);
@@ -135,6 +180,82 @@ class CourseMapPainter extends CustomPainter {
   void _drawBackground(Canvas canvas, Size size) {
     final paint = Paint()..color = const Color(0xFFEAF3FA);
     canvas.drawRect(Offset.zero & size, paint);
+  }
+
+  /// Blits the map tiles covering the visible canvas, and returns whether any
+  /// were on hand. Missing tiles are requested for a later frame, so the first
+  /// paint after opening the map draws nothing here and the chart background
+  /// shows through until they arrive.
+  bool _drawBasemap(Canvas canvas, Size size) {
+    final map = basemap;
+    if (map == null) return false;
+
+    // Deliberately not clipped to the canvas: zoomed out, the viewport reaches
+    // past the fitted course, and tiles out there are exactly the shoreline
+    // and harbour the sailor pulled back to see.
+    final view = map.viewport ?? Offset.zero & size;
+    if (view.isEmpty || _proj.pixelsPerMeter <= 0) return false;
+
+    final coords = _visibleTiles(map, view);
+    if (coords.isEmpty) return false;
+
+    final missing = <TileCoord>[];
+    var drew = false;
+    for (final coord in coords) {
+      final image = map.tiles.imageFor(coord);
+      if (image == null) {
+        missing.add(coord);
+        continue;
+      }
+      drew = _drawTile(canvas, image, coord) || drew;
+    }
+    if (missing.isNotEmpty) map.tiles.request(missing);
+    return drew;
+  }
+
+  /// Tiles covering [view], at the pyramid level closest to what is on screen,
+  /// stepping down a level at a time while the count exceeds the budget.
+  List<TileCoord> _visibleTiles(Basemap map, Rect view) {
+    final metersPerPixel = 1.0 / (_proj.pixelsPerMeter * map.viewScale);
+    final source = map.tiles.source;
+    var zoom = chooseTileZoom(
+      metersPerPixel: metersPerPixel,
+      latitude: _proj.centerLat,
+      source: source,
+    );
+
+    while (true) {
+      final coords = tilesForBounds(
+        northWest: _proj.toLatLng(view.topLeft),
+        southEast: _proj.toLatLng(view.bottomRight),
+        zoom: zoom,
+      );
+      if (coords.length <= map.maxTiles) return coords;
+      if (zoom <= source.minZoom) {
+        return coords.take(map.maxTiles).toList(growable: false);
+      }
+      zoom--;
+    }
+  }
+
+  bool _drawTile(Canvas canvas, ui.Image image, TileCoord coord) {
+    final bounds = tileBounds(coord);
+    final topLeft = _proj.toCanvas(bounds.northWest);
+    final bottomRight = _proj.toCanvas(bounds.southEast);
+    // Half a pixel of overlap: without it, rounding leaves hairline seams
+    // between neighbouring tiles.
+    final dst = Rect.fromPoints(topLeft, bottomRight).inflate(0.5);
+    if (dst.isEmpty) return false;
+
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      dst,
+      Paint()
+        ..filterQuality = FilterQuality.medium
+        ..isAntiAlias = true,
+    );
+    return true;
   }
 
   void _drawGrid(Canvas canvas, Size size) {
@@ -387,11 +508,14 @@ class CourseMapPainter extends CustomPainter {
       old.heading != heading ||
       old.speedMs != speedMs ||
       old.track.length != track.length ||
-      old.currentMarkIndex != currentMarkIndex;
+      old.currentMarkIndex != currentMarkIndex ||
+      old.basemap != basemap;
 }
 
-class _Projection {
-  _Projection({
+/// Equirectangular projection about the centre of the plotted points: metres
+/// east/north of the centre, scaled to canvas pixels.
+class CourseProjection {
+  CourseProjection({
     required this.centerLat,
     required this.centerLng,
     required this.metersPerDegLat,
@@ -407,14 +531,14 @@ class _Projection {
   final double pixelsPerMeter;
   final Size size;
 
-  factory _Projection.fit({
+  factory CourseProjection.fit({
     required List<LatLng> points,
     required Size size,
     required double paddingPx,
     required double minSpanMeters,
   }) {
     if (points.isEmpty) {
-      return _Projection(
+      return CourseProjection(
         centerLat: 0,
         centerLng: 0,
         metersPerDegLat: 111320,
@@ -451,7 +575,7 @@ class _Projection {
     final usableH = math.max(1.0, size.height - 2 * paddingPx);
     final pxPerMeter = math.min(usableW / spanMetersX, usableH / spanMetersY);
 
-    return _Projection(
+    return CourseProjection(
       centerLat: centerLat,
       centerLng: centerLng,
       metersPerDegLat: metersPerDegLat,
@@ -469,6 +593,17 @@ class _Projection {
     return Offset(
       size.width / 2 + dxMeters * pixelsPerMeter,
       size.height / 2 - dyMeters * pixelsPerMeter,
+    );
+  }
+
+  /// Inverse of [toCanvas].
+  LatLng toLatLng(Offset p) {
+    if (pixelsPerMeter <= 0) return LatLng(centerLat, centerLng);
+    final dxMeters = (p.dx - size.width / 2) / pixelsPerMeter;
+    final dyMeters = (size.height / 2 - p.dy) / pixelsPerMeter;
+    return LatLng(
+      centerLat + dyMeters / metersPerDegLat,
+      centerLng + (metersPerDegLng == 0 ? 0 : dxMeters / metersPerDegLng),
     );
   }
 }

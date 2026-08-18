@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Fetches the map tiles drawn behind the racecourse. The app works
+         without it — the map falls back to the offline chart background. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Race Mate"
         android:name="${applicationName}"
