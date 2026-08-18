@@ -43,6 +43,15 @@ from **Actions → Package APK**; see [docs/release.md](docs/release.md).
 - **Auto-advance** — automatically steps to the next mark when the boat enters the rounding radius
 - **GPS status** — live fix indicator with accuracy display and error recovery
 
+### Course Map
+- **Real-world basemap** — the course is plotted over OpenStreetMap tiles, so
+  the shoreline, harbour walls, and breakwaters show up behind the marks
+  instead of an empty grid
+- **Pinch, pan, and re-centre** — tiles follow the zoom, so the detail sharpens
+  as you zoom in
+- **Works offline** — no network, or the layers button toggled off, and the map
+  falls back to the plain chart background it has always drawn
+
 ### Course Management
 - Build a course from scratch by adding buoys (name, lat/lng, rounding radius)
 - Drag to reorder marks
@@ -68,7 +77,7 @@ from **Actions → Package APK**; see [docs/release.md](docs/release.md).
 | Courses | Map | Race |
 |:---:|:---:|:---:|
 | <img src="screenshots/courses.png" alt="Course library with bundled Chicago courses" width="240"> | <img src="screenshots/map.png" alt="Top-down course map with live boat position" width="240"> | <img src="screenshots/race.png" alt="Live race screen showing VMG, distance, bearing, SOG and COG" width="240"> |
-| Pick a course from the bundled library or build your own | Offline top-down plot of the course with your boat and heading | Live metrics with the race clock running and auto-advance armed |
+| Pick a course from the bundled library or build your own | Top-down plot of the course with your boat and heading, over a real-world basemap that falls back to an offline chart | Live metrics with the race clock running and auto-advance armed |
 
 Captured from a real build driven by the boat simulator — see
 [docs/screenshots.md](docs/screenshots.md) to retake them.

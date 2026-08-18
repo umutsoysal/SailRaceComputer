@@ -10,6 +10,16 @@ bumped with `make ship-patch` / `ship-minor` / `ship-major`; see
 ## [Unreleased]
 
 ### Added
+- **Real-world map layer on the Map tab** — the course is now plotted over
+  OpenStreetMap raster tiles (CARTO Positron, credited on screen), so the
+  shoreline, harbour walls, and breakwaters sit behind the marks instead of an
+  empty grid. Tiles follow the pinch zoom and keep drawing past the fitted plot,
+  so pulling back finds the coast relative to a course laid in open water.
+  A layers button in the app bar turns the basemap off for a metered connection
+  and remembers the choice; with it off — or with no network at all — the map
+  falls back to the offline chart background it has always drawn. No new
+  dependency: tiles ride on Flutter's own `NetworkImage` cache
+  ([`lib/services/map_tiles.dart`](lib/services/map_tiles.dart)).
 - Screenshots in the README, captured from a real build driven by the boat
   simulator, plus [`lib/dev/screenshot_main.dart`](lib/dev/screenshot_main.dart)
   and [docs/screenshots.md](docs/screenshots.md) so they can be retaken.
