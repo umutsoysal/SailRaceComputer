@@ -11,6 +11,18 @@ A GPS-powered sailing race companion app for iOS, Android, and Web. Race Mate tr
 
 ---
 
+## Screenshots
+
+| Courses | Map | Race |
+|:---:|:---:|:---:|
+| <img src="screenshots/courses.png" alt="Course library with bundled Chicago courses" width="240"> | <img src="screenshots/map.png" alt="Top-down course map with live boat position" width="240"> | <img src="screenshots/race.png" alt="Live race screen showing VMG, distance, bearing, SOG and COG" width="240"> |
+| Pick a course from the bundled library or build your own | Offline top-down plot of the course with your boat and heading | Live metrics with the race clock running and auto-advance armed |
+
+Captured from a real build driven by the boat simulator — see
+[docs/screenshots.md](docs/screenshots.md) to retake them.
+
+---
+
 ## Download
 
 Android builds are published to
@@ -60,18 +72,6 @@ from **Actions → Package APK**; see [docs/release.md](docs/release.md).
 
 ### Apple Watch / Wear OS Companion
 - Sends live race metrics to a paired watch via a native `MethodChannel`
-
----
-
-## Screenshots
-
-| Courses | Map | Race |
-|:---:|:---:|:---:|
-| <img src="screenshots/courses.png" alt="Course library with bundled Chicago courses" width="240"> | <img src="screenshots/map.png" alt="Top-down course map with live boat position" width="240"> | <img src="screenshots/race.png" alt="Live race screen showing VMG, distance, bearing, SOG and COG" width="240"> |
-| Pick a course from the bundled library or build your own | Offline top-down plot of the course with your boat and heading | Live metrics with the race clock running and auto-advance armed |
-
-Captured from a real build driven by the boat simulator — see
-[docs/screenshots.md](docs/screenshots.md) to retake them.
 
 ---
 
