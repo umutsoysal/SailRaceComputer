@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/ci.yml/badge.svg)](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/ci.yml)
 [![Package APK](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/package_apk.yml/badge.svg)](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/package_apk.yml)
+[![Package AAB](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/package_aab.yml/badge.svg)](https://github.com/umutsoysal/SailRaceComputer/actions/workflows/package_aab.yml)
 [![Download APK](https://img.shields.io/github/v/release/umutsoysal/SailRaceComputer?include_prereleases&label=download%20APK&color=3DDC84&logo=android&logoColor=white)](https://github.com/umutsoysal/SailRaceComputer/releases/latest)
 [![Flutter](https://img.shields.io/badge/Flutter-3.41.1-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -371,6 +372,9 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md) for workflow and quality expectati
 - **On-demand APK builds** — *Actions → Package APK* produces install-ready
   per-ABI APKs (~18MB) without cutting a release, optionally attached to a
   rolling `latest-build` prerelease for testers
+  ([docs/release.md](docs/release.md))
+- **On-demand AAB builds** — *Actions → Package AAB* produces a signed Play
+  Store-submittable App Bundle without cutting a release
   ([docs/release.md](docs/release.md))
 - Issue templates, PR template, CODEOWNERS, Security Policy, Code of Conduct
 

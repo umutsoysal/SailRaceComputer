@@ -1,0 +1,117 @@
+name: Package AAB
+
+# Produces a Play Store-submittable Android App Bundle (.aab) on demand,
+# without cutting a release tag.
+#
+# Google Play requires an AAB for new app submissions and updates — a plain
+# APK is not accepted. Run this from the Actions tab whenever you need a
+# bundle to upload to Play Console. Every run uploads the AAB as a workflow
+# artifact.
+#
+# Tagged releases build an AAB too, as part of release.yml. This workflow is
+# for getting one without cutting a release.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-aab-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Build Android App Bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The `secrets` context is unavailable to step-level `if:`, so resolve the
+      # "is signing configured?" question once, here.
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Flutter
+        uses: ./.github/actions/setup-flutter
+        with:
+          cache-key-suffix: android
+
+      - name: Validate version metadata
+        run: dart tool/version.dart check
+
+      - name: Fail fast without release signing
+        if: env.HAS_KEYSTORE != 'true'
+        run: |
+          echo "::error::ANDROID_KEYSTORE_BASE64 is not configured. Play Console rejects a debug-signed bundle, so this workflow refuses to produce one. Configure the ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, and ANDROID_KEY_PASSWORD repository secrets — see docs/release.md."
+          exit 1
+
+      - name: Decode Android keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+
+      - name: Write Android signing properties
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cat > android/key.properties <<EOF
+          storeFile=upload-keystore.jks
+          storePassword=${STORE_PASSWORD}
+          keyAlias=${KEY_ALIAS}
+          keyPassword=${KEY_PASSWORD}
+          EOF
+
+      - name: Build App Bundle
+        # Word splitting of the build-args output is intentional: it emits
+        # multiple separate flags.
+        run: |
+          # shellcheck disable=SC2046
+          flutter build appbundle --release $(dart tool/version.dart build-args android)
+
+      - name: Name and collect the AAB
+        id: collect
+        run: |
+          mkdir -p aab
+          version="$(dart tool/version.dart value marketing)"
+          build="$(dart tool/version.dart value android-build)"
+          short_sha="${GITHUB_SHA::7}"
+          stem="race-mate-${version}-b${build}-${short_sha}"
+          echo "stem=${stem}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "build=${build}" >> "$GITHUB_OUTPUT"
+
+          cp build/app/outputs/bundle/release/app-release.aab "aab/${stem}.aab"
+          cd aab
+          sha256sum -- *.aab > SHA256SUMS.txt
+          ls -1
+
+      - name: Summarise the build
+        env:
+          STEM: ${{ steps.collect.outputs.stem }}
+          VERSION: ${{ steps.collect.outputs.version }}
+          BUILD: ${{ steps.collect.outputs.build }}
+        run: |
+          {
+            echo "## Race Mate ${VERSION} (build ${BUILD}) — Android App Bundle"
+            echo
+            echo "🔏 Signed with the upload keystore — ready to upload to Play Console."
+            echo
+            echo "\`${STEM}.aab\`"
+            echo
+            echo "Download it from the **Artifacts** section of this run, then upload it"
+            echo "under Play Console → your app → Release → the track you want."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload AAB as a workflow artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.collect.outputs.stem }}-aab
+          path: aab/*
+          if-no-files-found: error
+          retention-days: 30
