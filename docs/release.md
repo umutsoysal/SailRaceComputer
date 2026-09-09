@@ -43,6 +43,21 @@ a Play Store install.
 To install one, download it on the phone and open it — Android will ask for
 permission to install from that browser or file manager the first time.
 
+### On demand — the "Package AAB" workflow
+
+For a signed Android App Bundle ready to upload to Play Console, without cutting
+a release: **Actions → Package AAB → Run workflow**.
+
+Unlike APKs, Play Console rejects debug-signed bundles. The workflow therefore
+**requires** `ANDROID_KEYSTORE_BASE64` to be configured and refuses to run
+without it. See "Repository secrets" below for setup instructions.
+
+| Input | Default | Effect |
+|-------|---------|--------|
+| `publish` | off | Also attach the AAB to the rolling `latest-build` prerelease |
+
+Every run uploads the AAB and `SHA256SUMS.txt` as workflow artifacts (kept 30 days).
+
 ### Tagged releases
 
 Pushing a `v*` tag runs `release.yml`, which publishes the per-ABI APKs, the
